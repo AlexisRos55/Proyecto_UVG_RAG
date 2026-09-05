@@ -1,0 +1,25 @@
+# Normalizacion de finales de linea.
+#
+# Git for Windows se instala con core.autocrlf=true por defecto (el valor que resulta
+# de seguir el paso 1 del README "dejando las opciones por defecto"). Sin este archivo,
+# ese ajuste convierte los scripts de shell a CRLF al clonar, el shebang queda como
+# "#!/bin/sh\r" y el contenedor del backend falla en bucle con un mensaje enganoso:
+#
+#     exec ./docker-entrypoint.sh: no such file or directory
+#
+# El archivo existe; lo que no existe es un interprete llamado "sh\r".
+
+* text=auto
+
+# Los scripts que se ejecutan dentro de contenedores Linux deben conservar LF
+# independientemente del sistema operativo donde se clone el repositorio.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
+docker-entrypoint.sh text eol=lf
+
+# Archivos binarios: sin conversion de ningun tipo.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ico binary
