@@ -1,0 +1,65 @@
+{
+  "description": "Conjunto de referencia para la evaluacion RAGAS (EPIC-6, ADR-0010). Preguntas basadas en el corpus de ejemplo de scripts/sample_corpus/ (ver scripts/generate_sample_corpus.py). Debe reemplazarse por preguntas reales sobre los documentos oficiales de UVG Altiplano cuando esten disponibles.",
+  "cases": [
+    {
+      "question": "¿Con cuántos días de anticipación debo solicitar mi reincorporación?",
+      "reference_answer": "Debes presentar tu solicitud de reincorporación en la oficina de Registro Académico con al menos 30 días de anticipación al inicio del ciclo.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Qué porcentaje de la colegiatura cubre la Beca de Excelencia Académica?",
+      "reference_answer": "La Beca de Excelencia Académica cubre hasta el 50% del valor de la colegiatura.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Cuál es el índice académico mínimo para mantener la Beca de Excelencia Académica?",
+      "reference_answer": "Se requiere un índice académico mínimo de 85 puntos.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Qué porcentaje mínimo de asistencia necesito para tener derecho a examen final?",
+      "reference_answer": "Se requiere un mínimo de 80% de asistencia a clases.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿El seguro estudiantil cubre accidentes fuera del campus?",
+      "reference_answer": "No, el seguro no cubre accidentes ocurridos fuera de las instalaciones del campus.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Cuánto tiempo tengo para reportar un incidente al seguro estudiantil?",
+      "reference_answer": "Debes reportarlo a la Clínica Estudiantil dentro de las 24 horas siguientes al incidente.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Qué descuento obtengo si pago mi colegiatura en los primeros 10 días del mes?",
+      "reference_answer": "Obtienes un 5% de descuento sobre el monto de la colegiatura (beneficio de pronto pago).",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Cuál es el plazo máximo para retirar un curso?",
+      "reference_answer": "El plazo máximo es de 6 semanas después de iniciado el semestre, con autorización del coordinador de carrera.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Qué porcentaje de colegiatura cubre la Beca Deportiva?",
+      "reference_answer": "La Beca Deportiva cubre hasta el 30% de la colegiatura.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Dónde debo presentar mi solicitud de reincorporación?",
+      "reference_answer": "En la oficina de Registro Académico.",
+      "expect_grounded": true
+    },
+    {
+      "question": "¿Cuál es la capital de Guatemala?",
+      "reference_answer": "Esta pregunta no está relacionada con los documentos institucionales; el asistente debe abstenerse de responder.",
+      "expect_grounded": false
+    },
+    {
+      "question": "¿Puedo cambiarme a otra universidad mientras conservo mi beca de UVG Altiplano?",
+      "reference_answer": "El corpus de ejemplo no contiene información sobre este escenario; el asistente debe abstenerse de responder.",
+      "expect_grounded": false
+    }
+  ]
+}

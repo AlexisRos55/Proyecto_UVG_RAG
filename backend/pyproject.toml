@@ -1,0 +1,57 @@
+[project]
+name = "asistente-rag-uvg-altiplano"
+version = "0.1.0"
+description = "Backend del Asistente Virtual Institucional basado en RAG - UVG Altiplano"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "python-multipart>=0.0.9",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "pydantic[email]>=2.7",
+    "pydantic-settings>=2.4",
+    "anthropic>=0.34",
+    "chromadb>=0.5",
+    "sentence-transformers>=3.0",
+    "pymupdf>=1.24",
+    "loguru>=0.7",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
+    "greenlet>=3.0",
+    "bcrypt>=4.1",
+    "pyjwt>=2.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    # Pin exacto: ragas>0.2.15 tiene un import roto de langchain_community.chat_models.vertexai
+    # que no existe en langchain-community>=0.4.1 (bug de upstream, ver docs/adr/0010-ragas-evaluation-framework.md).
+    "ragas==0.2.15",
+    "langchain-community>=0.4.0,<0.4.1",
+    "numpy>=2.0",
+    "datasets>=2.20",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: requires the local development PostgreSQL container (docs/07-backlog.md, EPIC-3)",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
