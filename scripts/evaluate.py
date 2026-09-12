@@ -28,7 +28,7 @@ import json
 import statistics
 import time
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from langchain_anthropic import ChatAnthropic
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -36,7 +36,12 @@ from loguru import logger
 from ragas import EvaluationDataset, SingleTurnSample, evaluate
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
-from ragas.metrics import Faithfulness, LLMContextPrecisionWithReference, LLMContextRecall, ResponseRelevancy
+from ragas.metrics import (
+    Faithfulness,
+    LLMContextPrecisionWithReference,
+    LLMContextRecall,
+    ResponseRelevancy,
+)
 
 from app.domain.entities.conversation import Conversation
 from app.domain.entities.message import Message
@@ -50,14 +55,16 @@ from app.infrastructure.adapters.vector_store.chroma_vector_store import ChromaV
 from app.infrastructure.adapters.vector_store.sentence_transformers_embedding import (
     SentenceTransformersEmbeddingAdapter,
 )
-from app.infrastructure.config.settings import get_anthropic_settings, get_chroma_settings
+from app.infrastructure.config.settings import (
+    get_anthropic_settings,
+    get_chroma_settings,
+    get_rag_settings,
+)
 from app.shared.kernel.clock import utc_now
 from app.shared.kernel.ids import new_id
 
 GOLDEN_DATASET_PATH = Path(__file__).parent / "golden_dataset.json"
 REPORT_PATH = Path(__file__).parent / "evaluation_report.json"
-TOP_K = 5
-MIN_SIMILARITY_THRESHOLD = 0.35
 
 # Placeholder documentado (Project Charter, criterios de éxito): el equipo debe reemplazar
 # este valor con una medición real del tiempo de atención manual antes de la defensa.
@@ -82,15 +89,22 @@ async def _answer_one(
     embedding_port: SentenceTransformersEmbeddingAdapter,
     vector_store_port: ChromaVectorStoreAdapter,
     verification_port: SingleCallVerificationAdapter,
+    top_k: int,
+    min_similarity_threshold: float,
 ) -> tuple[list[str], VerifiedAnswer | None, float]:
     """Replica FR-06 a FR-10 con visibilidad completa del contexto recuperado (que la
     respuesta HTTP de /chat no expone), necesaria para calcular las métricas de RAGAS.
+
+    top_k/min_similarity_threshold se reciben desde RagSettings (docs/11-reproducibility.md)
+    para que esta evaluación use exactamente los mismos parámetros que producción — antes
+    este script fijaba sus propios valores locales, desincronizados de
+    AnswerStudentQueryUseCase.
     """
     started_at = time.perf_counter()
 
     query_embedding = await asyncio.to_thread(embedding_port.embed_text, question)
-    candidates = await asyncio.to_thread(vector_store_port.search, query_embedding, TOP_K)
-    relevant = [c for c in candidates if c.score.meets_threshold(MIN_SIMILARITY_THRESHOLD)]
+    candidates = await asyncio.to_thread(vector_store_port.search, query_embedding, top_k)
+    relevant = [c for c in candidates if c.score.meets_threshold(min_similarity_threshold)]
 
     if not relevant:
         elapsed = time.perf_counter() - started_at
@@ -108,9 +122,13 @@ async def run_evaluation() -> None:
 
     chroma_settings = get_chroma_settings()
     anthropic_settings = get_anthropic_settings()
+    rag_settings = get_rag_settings()
 
-    embedding_port = SentenceTransformersEmbeddingAdapter()
-    vector_store_port = ChromaVectorStoreAdapter(persist_directory=chroma_settings.chroma_persist_dir)
+    embedding_port = SentenceTransformersEmbeddingAdapter(model_name=rag_settings.embedding_model_name)
+    vector_store_port = ChromaVectorStoreAdapter(
+        persist_directory=chroma_settings.chroma_persist_dir,
+        collection_name=rag_settings.chroma_collection_name,
+    )
     llm_port = AnthropicLLMAdapter(anthropic_settings)
     verification_port = SingleCallVerificationAdapter(llm_port)
 
@@ -122,7 +140,12 @@ async def run_evaluation() -> None:
     for case in cases:
         question = case["question"]
         contexts, verified_answer, elapsed = await _answer_one(
-            question, embedding_port, vector_store_port, verification_port
+            question,
+            embedding_port,
+            vector_store_port,
+            verification_port,
+            rag_settings.top_k,
+            rag_settings.min_similarity_threshold,
         )
         latencies.append(elapsed)
 

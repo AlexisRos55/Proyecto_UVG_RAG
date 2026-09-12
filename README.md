@@ -19,7 +19,7 @@ El proyecto fue diseñado en fases (documentación de arquitectura → implement
 | Ingesta documental (PDF → limpieza → chunking → embeddings → ChromaDB) | Implementado y validado con documentos reales |
 | Núcleo conversacional RAG (recuperación + verificación + respuesta) | Implementado (Chain-of-Verification de una sola llamada), validado end-to-end |
 | Autenticación institucional | Implementado (registro, login, bcrypt, JWT, roles estudiante/admin) |
-| Frontend de chat | Implementado, con diseño institucional propio (ver capturas) |
+| Frontend de chat | Implementado, con design system propio e identidad UVG (ver capturas) |
 | Panel administrativo de documentos | Implementado (subir / listar / eliminar / reindexar), sin rediseño visual todavía |
 | Infraestructura Docker Compose | Implementado y verificado (`docker compose up --build` levanta los 3 servicios) |
 | Evaluación con RAGAS | Script implementado; pendiente de ejecutarse con una `ANTHROPIC_API_KEY` real para obtener métricas |
@@ -42,6 +42,10 @@ Cobertura de pruebas automatizadas del backend: **54 pruebas** (unitarias, de in
 
 ![Conversación](docs/screenshots/chat-conversation.png)
 
+**Modo oscuro**
+
+![Modo oscuro](docs/screenshots/chat-dark.png)
+
 ## Características principales
 
 - **Chat institucional** con respuestas fundamentadas exclusivamente en documentos oficiales indexados.
@@ -52,7 +56,10 @@ Cobertura de pruebas automatizadas del backend: **54 pruebas** (unitarias, de in
 - **Panel administrativo de documentos**: subir, listar, eliminar y reindexar PDFs desde la interfaz, sin reiniciar el servicio.
 - **Ingesta automática al arrancar**: cualquier PDF colocado en `backend/documents/` se indexa solo la primera vez que el backend inicia.
 - **Modelo de Claude configurable por variable de entorno** (`ANTHROPIC_MODEL`), sin hardcodear el modelo en el código.
-- **Diseño institucional propio** (login y chat) basado en el manual de normas gráficas oficial de UVG (colores, logotipos y tipografía institucionales).
+- **Design system propio** (`frontend/src/design-system/`) con escala tipográfica, sombras, curvas de movimiento y componentes reutilizables, en lugar de estilos dispersos por componente.
+- **Identidad visual UVG** derivada del manual de normas gráficas oficial (`docs/design/brand-source/`): verde institucional `#008C36` como acento en modo claro y verde MASTERS `#0DF2B0` en modo oscuro, ambos tomados de la paleta oficial. El color de marca se usa solo en acentos, nunca como superficie.
+- **Modo claro y oscuro**, con conmutador en la aplicación y respeto por la preferencia del sistema.
+- **Interfaz responsiva**, con panel lateral colapsable en pantallas pequeñas.
 - **Dockerizado end-to-end**: `docker compose up --build` levanta base de datos, backend y frontend con healthchecks y migraciones automáticas.
 - **Script de evaluación con RAGAS** (fidelidad, relevancia, precisión y exhaustividad de contexto) sobre un dataset de referencia (`scripts/golden_dataset.json`).
 
@@ -84,6 +91,9 @@ Cobertura de pruebas automatizadas del backend: **54 pruebas** (unitarias, de in
 | TanStack Query | Estado de servidor / llamadas a la API |
 | React Hook Form + Zod | Formularios y validación |
 | React Router | Enrutamiento |
+| Framer Motion | Animaciones y microinteracciones |
+| react-markdown + remark-gfm | Renderizado de las respuestas del asistente |
+| next-themes | Modo claro / oscuro |
 | Vitest + Testing Library | Pruebas de componentes |
 
 **Infraestructura**
@@ -145,8 +155,10 @@ Todas las decisiones técnicas relevantes están documentadas como **ADR** (Arch
 | [docs/07-backlog.md](docs/07-backlog.md) | Backlog inicial por épicas |
 | [docs/08-roadmap.md](docs/08-roadmap.md) | Roadmap con análisis de capacidad real |
 | [docs/09-risk-register.md](docs/09-risk-register.md) | Registro de riesgos técnicos y de proyecto |
+| [docs/10-addendum-tecnico-implementacion.md](docs/10-addendum-tecnico-implementacion.md) | Addendum Técnico de Implementación (ATI) — reconcilia el Protocolo de Investigación con las decisiones técnicas reales, sin modificarlo (borrador de diseño; redacción final pendiente de congelamiento total del proyecto) |
+| [docs/11-reproducibility.md](docs/11-reproducibility.md) | Matriz oficial de parámetros experimentales congelados y guía de instalación reproducible exacta |
 | [docs/adr/](docs/adr/) | Architecture Decision Records — cada decisión con alternativas, ventajas, desventajas y trade-offs |
-| [docs/source/](docs/source/) | Especificación funcional original entregada por el asesor |
+| [docs/source/](docs/source/) | Especificación funcional original del asesor y Protocolo de Investigación |
 
 ---
 
@@ -313,6 +325,8 @@ npm run dev
 ```
 
 El frontend queda disponible en `http://localhost:5173` y llama al backend en `http://localhost:8000` (variable `VITE_API_BASE_URL`, ver `frontend/.env.example`).
+
+> `npm install` es para desarrollo normal. Para reproducir exactamente el entorno usado en la validación experimental (Fase V del protocolo), usa `npm ci` en su lugar, que instala estrictamente lo fijado en `package-lock.json` — ver [docs/11-reproducibility.md](docs/11-reproducibility.md).
 
 ### Variables de entorno relevantes fuera de Docker
 

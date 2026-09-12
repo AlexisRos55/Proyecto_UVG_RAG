@@ -50,6 +50,23 @@ class AuthSettings(BaseSettings):
         return emails
 
 
+class RagSettings(BaseSettings):
+    """Parámetros experimentales del pipeline RAG (docs/10-addendum-tecnico-implementacion.md,
+    sección VII; docs/11-reproducibility.md). Antes existían solo como valores por defecto de
+    constructor, invisibles fuera del código fuente. Congelados a partir de la Fase 3.1 del
+    proyecto: no deben modificarse durante la ejecución de la Fase V del protocolo sin
+    actualizar ambos documentos."""
+
+    model_config = SettingsConfigDict(env_prefix="RAG_", extra="ignore")
+
+    top_k: int = 10
+    min_similarity_threshold: float = 0.35
+    chunk_size: int = 1000
+    chunk_overlap: int = 100
+    embedding_model_name: str = "all-MiniLM-L6-v2"
+    chroma_collection_name: str = "institutional_documents"
+
+
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore")
 
@@ -89,3 +106,8 @@ def get_auth_settings() -> AuthSettings:
 @lru_cache
 def get_app_settings() -> AppSettings:
     return AppSettings()
+
+
+@lru_cache
+def get_rag_settings() -> RagSettings:
+    return RagSettings()

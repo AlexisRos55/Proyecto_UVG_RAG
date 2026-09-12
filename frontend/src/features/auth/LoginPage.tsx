@@ -1,132 +1,116 @@
+import { useId, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, FileText, GraduationCap, ShieldCheck, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { MotionConfig } from "framer-motion";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { CredentialsForm } from "@/features/auth/components/credentials-form";
+import { FormAlert } from "@/features/auth/components/form-alert";
+import { HeroSection } from "@/features/auth/components/hero-section";
+import { InfoPanel } from "@/features/auth/components/info-panel";
+import { LoginCard } from "@/features/auth/components/login-card";
+import { LoginFooter } from "@/features/auth/components/login-footer";
+import { LoginForm } from "@/features/auth/components/login-form";
+import { MicrosoftLogo } from "@/features/auth/components/microsoft-logo";
+import { MobileBrandBar } from "@/features/auth/components/mobile-brand-bar";
+import { SocialLoginButton } from "@/features/auth/components/social-login-button";
 import { useAuth } from "@/features/auth/auth-context";
-import type { CredentialsFormValues } from "@/features/auth/schemas";
+import type { LoginFormValues } from "@/features/auth/schemas";
 import { ApiError } from "@/shared/lib/api-client";
 
-const FEATURES = [
-  { icon: BookOpen, label: "Reglamentos y normativas" },
-  { icon: GraduationCap, label: "Becas y beneficios" },
-  { icon: ShieldCheck, label: "Seguro estudiantil" },
-  { icon: FileText, label: "Trámites y procedimientos" },
-] as const;
+/**
+ * Estos dos caminos existen en la interfaz pero todavía no en el backend (no hay endpoint de
+ * recuperación ni federación con Entra ID). Se muestran deshabilitados y explicados en lugar
+ * de ocultarse, para que el portal refleje el alcance previsto del sistema.
+ */
+const PASSWORD_RESET_NOTICE =
+  "El restablecimiento de contraseña se gestiona con el equipo de soporte académico del Campus Altiplano.";
+const MICROSOFT_SSO_NOTICE =
+  "El acceso con Microsoft 365 aún no está habilitado. Ingresa con tu correo institucional y contraseña.";
 
+const GENERIC_LOGIN_ERROR = "No se pudo iniciar sesión. Inténtalo de nuevo en unos momentos.";
+
+/** Portal de acceso institucional: panel de marca (45%) + formulario centrado (55%). */
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeId = useId();
 
-  const mutation = useMutation({
-    mutationFn: (values: CredentialsFormValues) => login(values.email, values.password),
-    onSuccess: () => navigate("/chat"),
-    onError: (error: unknown) => {
-      const message = error instanceof ApiError ? error.message : "No se pudo iniciar sesión.";
-      toast.error(message);
-    },
+  const mutation = useMutation<void, unknown, LoginFormValues>({
+    mutationFn: (values) => login(values),
+    onSuccess: () => navigate("/chat", { replace: true }),
   });
 
+  const errorMessage = mutation.isError
+    ? mutation.error instanceof ApiError
+      ? mutation.error.message
+      : GENERIC_LOGIN_ERROR
+    : null;
+
+  const handleSubmit = (values: LoginFormValues) => {
+    setNotice(null);
+    mutation.mutate(values);
+  };
+
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12">
-        <img
-          src="/brand/campus-altiplano-bg.jpg"
-          alt=""
-          className="absolute inset-0 size-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0C3D5B]/95 via-[#0C3D5B]/80 to-[#0C3D5B]/50" />
+    <MotionConfig reducedMotion="user">
+      {/* `grid-rows-[auto]` y no `grid-rows-1`: la utilidad numérica compila a
+          `minmax(0,1fr)`, que elimina el suelo de altura mínima de la fila y recorta el
+          panel institucional en pantallas bajas. Una fila `auto` se estira igual hasta
+          `min-h-svh` pero crece cuando el contenido no cabe. */}
+      <div className="grid min-h-svh grid-rows-[auto_1fr] bg-uvg-canvas lg:grid-cols-[45fr_55fr] lg:grid-rows-[auto]">
+        <MobileBrandBar />
+        <HeroSection />
 
-        <div className="relative flex items-start justify-between">
-          <img
-            src="/brand/logo-uvg-altiplano-horizontal-blanco.png"
-            alt="Universidad del Valle de Guatemala, Campus Altiplano"
-            className="h-12 w-auto"
+        <main className="relative flex min-w-0 items-center justify-center px-5 py-10 sm:px-8 sm:py-12 xl:py-14">
+          {/* Textura del lienzo: halo azul superior y retícula muy tenue */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(65%_45%_at_50%_0%,rgb(0_140_54/0.07),transparent_70%)]"
           />
-          <div className="max-w-[9rem] border-t border-white/40 pt-2 text-right text-sm font-medium text-white/80 italic">
-            Excelencia que trasciende
-          </div>
-        </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgb(15_23_42/0.028)_1px,transparent_1px),linear-gradient(90deg,rgb(15_23_42/0.028)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:radial-gradient(70%_55%_at_50%_45%,black,transparent)]"
+          />
 
-        <div className="relative flex flex-col gap-8">
-          <div className="flex flex-col gap-3">
-            <h1 className="text-4xl leading-tight font-semibold text-white">
-              Asistente Virtual
-              <br />
-              Institucional
-            </h1>
-            <p className="text-lg text-white/80">
-              Tu aliado para una vida universitaria más informada
-            </p>
-          </div>
+          <div className="relative flex w-full flex-col items-center gap-7">
+            <LoginCard title="Bienvenido" subtitle="Inicia sesión con tu cuenta institucional.">
+              <FormAlert message={errorMessage} />
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-            {FEATURES.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex flex-col gap-2">
-                <Icon className="size-6 text-white" strokeWidth={1.75} />
-                <span className="text-sm font-medium text-white/90">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative flex items-end justify-between text-xs font-medium tracking-widest text-white/70 uppercase">
-          <div className="flex items-center gap-2">
-            <span>Campus Altiplano</span>
-            <span className="h-px w-8 bg-white/40" />
-          </div>
-          <div className="text-right leading-relaxed">
-            Formando líderes
-            <br />
-            para un mejor mañana
-          </div>
-        </div>
-      </div>
-
-      <div className="flex min-w-0 items-center justify-center bg-muted/40 p-4 sm:p-8">
-        <Card className="w-full min-w-0 max-w-md rounded-2xl py-8 shadow-xl ring-foreground/5">
-          <CardContent className="flex flex-col gap-6">
-            <div className="flex flex-col items-center gap-1 text-center">
-              <img
-                src="/brand/logo-uvg-altiplano-horizontal-verde.png"
-                alt="Universidad del Valle de Guatemala"
-                className="h-10 w-auto"
+              <LoginForm
+                isPending={mutation.isPending}
+                isSuccess={mutation.isSuccess}
+                onSubmit={handleSubmit}
+                onForgotPassword={() => setNotice(PASSWORD_RESET_NOTICE)}
               />
-              <span className="text-sm font-medium text-muted-foreground">Campus Altiplano</span>
-            </div>
 
-            <Separator />
+              <div className="flex items-center gap-3">
+                <Separator className="flex-1 bg-slate-200" />
+                <span className="text-xs font-medium text-slate-400">o</span>
+                <Separator className="flex-1 bg-slate-200" />
+              </div>
 
-            <div className="flex flex-col items-center gap-1 text-center">
-              <h2 className="text-2xl font-semibold text-foreground">Bienvenido</h2>
-              <p className="text-sm text-muted-foreground">
-                Inicia sesión con tu correo institucional para continuar
-              </p>
-            </div>
+              <div className="flex flex-col gap-4">
+                <SocialLoginButton
+                  icon={<MicrosoftLogo className="size-full" />}
+                  label="Ingresar con Microsoft"
+                  describedBy={notice ? noticeId : undefined}
+                  onClick={() => setNotice(MICROSOFT_SSO_NOTICE)}
+                />
 
-            <CredentialsForm
-              submitLabel="Iniciar sesión"
-              pendingLabel="Ingresando..."
-              isPending={mutation.isPending}
-              onSubmit={(values) => mutation.mutate(values)}
-            />
+                <FormAlert id={noticeId} message={notice} tone="info" />
 
-            <Separator />
+                <InfoPanel>
+                  Solo pueden ingresar usuarios autorizados por la Universidad del Valle de
+                  Guatemala.
+                </InfoPanel>
+              </div>
+            </LoginCard>
 
-            <div className="flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
-              <Sparkles className="size-3.5 text-primary" />
-              <span>
-                Asistente Virtual UVG Altiplano
-                <br />
-                Potenciado por Inteligencia Artificial
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+            <LoginFooter />
+          </div>
+        </main>
       </div>
-    </div>
+    </MotionConfig>
   );
 }

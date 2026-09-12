@@ -10,11 +10,22 @@ interface Session {
   token: string;
 }
 
+/**
+ * Credenciales tal y como las emite el formulario de acceso. `rememberMe` es una
+ * preferencia del cliente (dónde se guarda la sesión) y no viaja al API: el contrato de
+ * `POST /auth/login` sólo declara `email` y `password`.
+ */
+export interface LoginCredentials {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+}
+
 interface AuthContextValue {
   session: Session | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -32,31 +43,55 @@ function sessionFromResponse(response: AuthResponse): Session {
   };
 }
 
+/**
+ * "Mantener sesión iniciada" decide el almacén: `localStorage` sobrevive al cierre del
+ * navegador, `sessionStorage` muere con la pestaña. Al leer se consultan ambos porque la
+ * elección anterior del usuario no se conoce hasta encontrar la sesión.
+ */
+function storageFor(persistent: boolean): Storage {
+  return persistent ? localStorage : sessionStorage;
+}
+
 function loadStoredSession(): Session | null {
+  for (const storage of [localStorage, sessionStorage]) {
+    try {
+      const raw = storage.getItem(STORAGE_KEY);
+      if (raw) {
+        return JSON.parse(raw) as Session;
+      }
+    } catch {
+      // almacenamiento no disponible (modo privado) o JSON corrupto: se ignora
+    }
+  }
+  return null;
+}
+
+function clearStoredSession(): void {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Session) : null;
+    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   } catch {
-    return null;
+    // almacenamiento no disponible: la sesión sólo vive en memoria
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(loadStoredSession);
 
-  const persistSession = useCallback((next: Session | null) => {
+  const persistSession = useCallback((next: Session, persistent: boolean) => {
     setSession(next);
-    if (next) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
+    clearStoredSession();
+    try {
+      storageFor(persistent).setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // almacenamiento no disponible: la sesión sólo vive en memoria
     }
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async ({ email, password, rememberMe = false }: LoginCredentials) => {
       const response = await apiClient.post<AuthResponse>("/auth/login", { email, password });
-      persistSession(sessionFromResponse(response));
+      persistSession(sessionFromResponse(response), rememberMe);
     },
     [persistSession],
   );
@@ -64,12 +99,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (email: string, password: string) => {
       const response = await apiClient.post<AuthResponse>("/auth/register", { email, password });
-      persistSession(sessionFromResponse(response));
+      persistSession(sessionFromResponse(response), true);
     },
     [persistSession],
   );
 
-  const logout = useCallback(() => persistSession(null), [persistSession]);
+  const logout = useCallback(() => {
+    setSession(null);
+    clearStoredSession();
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({

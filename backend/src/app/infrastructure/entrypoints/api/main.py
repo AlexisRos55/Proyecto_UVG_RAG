@@ -27,6 +27,7 @@ from app.infrastructure.config.settings import (
     get_app_settings,
     get_auth_settings,
     get_chroma_settings,
+    get_rag_settings,
 )
 from app.infrastructure.entrypoints.api.middlewares.error_handlers import (
     register_exception_handlers,
@@ -48,10 +49,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     chroma_settings = get_chroma_settings()
     anthropic_settings = get_anthropic_settings()
     auth_settings = get_auth_settings()
+    rag_settings = get_rag_settings()
 
-    app.state.embedding_port = SentenceTransformersEmbeddingAdapter()
+    app.state.embedding_port = SentenceTransformersEmbeddingAdapter(
+        model_name=rag_settings.embedding_model_name
+    )
     app.state.vector_store_port = ChromaVectorStoreAdapter(
-        persist_directory=chroma_settings.chroma_persist_dir
+        persist_directory=chroma_settings.chroma_persist_dir,
+        collection_name=rag_settings.chroma_collection_name,
     )
     app.state.text_extractor_port = PyMuPDFExtractorAdapter()
     llm_port = AnthropicLLMAdapter(anthropic_settings)

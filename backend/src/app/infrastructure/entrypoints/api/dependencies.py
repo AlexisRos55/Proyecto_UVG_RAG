@@ -29,6 +29,9 @@ from app.domain.ports.embedding_port import EmbeddingPort
 from app.domain.ports.user_repository_port import UserRepositoryPort
 from app.domain.ports.vector_store_port import VectorStorePort
 from app.domain.ports.verification_strategy_port import VerificationStrategyPort
+from app.infrastructure.adapters.document_processing.chunking_service import (
+    FixedSizeChunkingService,
+)
 from app.infrastructure.adapters.document_processing.document_indexing_pipeline import (
     DocumentIndexingPipeline,
 )
@@ -43,8 +46,10 @@ from app.infrastructure.adapters.persistence.postgres_user_repository import Pos
 from app.infrastructure.config.settings import (
     AppSettings,
     AuthSettings,
+    RagSettings,
     get_app_settings,
     get_auth_settings,
+    get_rag_settings,
 )
 from app.shared.exceptions.domain_errors import UnauthorizedError
 
@@ -73,6 +78,10 @@ def get_auth_port(request: Request) -> AuthPort:
 
 def get_auth_settings_dependency() -> AuthSettings:
     return get_auth_settings()
+
+
+def get_rag_settings_dependency() -> RagSettings:
+    return get_rag_settings()
 
 
 def get_app_settings_dependency() -> AppSettings:
@@ -127,6 +136,7 @@ def get_answer_query_use_case(
         ConversationRepositoryPort, Depends(get_conversation_repository)
     ],
     document_repository: Annotated[DocumentRepositoryPort, Depends(get_document_repository)],
+    rag_settings: Annotated[RagSettings, Depends(get_rag_settings_dependency)],
 ) -> AnswerStudentQueryUseCase:
     return AnswerStudentQueryUseCase(
         embedding_port=embedding_port,
@@ -134,6 +144,8 @@ def get_answer_query_use_case(
         verification_port=verification_port,
         conversation_repository=conversation_repository,
         document_repository=document_repository,
+        top_k=rag_settings.top_k,
+        min_similarity_threshold=rag_settings.min_similarity_threshold,
     )
 
 
@@ -141,11 +153,15 @@ def get_indexing_pipeline(
     text_extractor: Annotated[DocumentTextExtractorPort, Depends(get_text_extractor_port)],
     embedding_port: Annotated[EmbeddingPort, Depends(get_embedding_port)],
     vector_store_port: Annotated[VectorStorePort, Depends(get_vector_store_port)],
+    rag_settings: Annotated[RagSettings, Depends(get_rag_settings_dependency)],
 ) -> DocumentIndexingPipeline:
     return DocumentIndexingPipeline(
         text_extractor=text_extractor,
         embedding_port=embedding_port,
         vector_store_port=vector_store_port,
+        chunking_service=FixedSizeChunkingService(
+            chunk_size=rag_settings.chunk_size, overlap=rag_settings.chunk_overlap
+        ),
     )
 
 

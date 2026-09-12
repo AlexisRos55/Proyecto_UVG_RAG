@@ -1,0 +1,104 @@
+/* ============================================================================
+   UVG AI — Capa de tokens del design system
+   ----------------------------------------------------------------------------
+   Se declara con @theme (no `inline`) para que Tailwind genere utilidades reales
+   —`text-body`, `shadow-float`, `ease-standard`— y, a la vez, emita las
+   variables en :root para poder redefinirlas en modo oscuro.
+
+   Los tokens de COLOR viven en index.css (fuente de verdad semántica de
+   shadcn/ui). Aquí vive todo lo demás: tipografía, sombras, movimiento y las
+   medidas de layout.
+   ========================================================================== */
+
+@theme {
+    /* ── Jerarquía tipográfica ───────────────────────────────────────────────
+       Escala pensada para lectura larga, no para un dashboard: el cuerpo es de
+       17px con interlineado 1.75 (medida de documento, no de tabla). Cada paso
+       fija su propio interlineado y tracking para que la jerarquía sea
+       reproducible sin ajustes manuales en cada componente. */
+    --text-display: clamp(2.25rem, 5.2vw, 3.25rem);
+    --text-display--line-height: 1.06;
+    --text-display--letter-spacing: -0.04em;
+    --text-display--font-weight: 600;
+
+    --text-title: 1.4375rem;
+    --text-title--line-height: 1.34;
+    --text-title--letter-spacing: -0.022em;
+    --text-title--font-weight: 600;
+
+    --text-heading: 1.0625rem;
+    --text-heading--line-height: 1.5;
+    --text-heading--letter-spacing: -0.012em;
+    --text-heading--font-weight: 600;
+
+    --text-body: 1.0625rem;
+    --text-body--line-height: 1.75;
+    --text-body--letter-spacing: -0.006em;
+
+    --text-ui: 0.875rem;
+    --text-ui--line-height: 1.45;
+    --text-ui--letter-spacing: -0.006em;
+
+    --text-caption: 0.8125rem;
+    --text-caption--line-height: 1.55;
+
+    --text-micro: 0.6875rem;
+    --text-micro--line-height: 1.4;
+    --text-micro--letter-spacing: 0.07em;
+
+    /* ── Movimiento ──────────────────────────────────────────────────────────
+       `standard` es la curva de macOS/iOS: acelera rápido y frena largo. Es lo
+       que produce la sensación de aplicación nativa en vez de transición web. */
+    --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Sombras ─────────────────────────────────────────────────────────────────
+   Difusas y de opacidad baja: elevación sin bordes. Son el sustituto del borde
+   en toda la experiencia de chat ("casi sin líneas").
+
+   Se declaran como @utility y no dentro de @theme a propósito: Tailwind inlinea
+   el valor de los tokens `--shadow-*` del tema al compilar la utilidad, con lo
+   que redefinirlos en `.dark` no tendría ningún efecto. Referenciando la
+   variable a mano, el modo oscuro sí puede sustituirlas. */
+@utility shadow-soft {
+    box-shadow: var(--shadow-soft);
+}
+@utility shadow-lifted {
+    box-shadow: var(--shadow-lifted);
+}
+@utility shadow-float {
+    box-shadow: var(--shadow-float);
+}
+
+:root {
+    --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 1px rgb(0 0 0 / 0.02);
+    --shadow-lifted: 0 4px 16px -4px rgb(0 0 0 / 0.08), 0 1px 4px -1px rgb(0 0 0 / 0.04);
+    --shadow-float: 0 12px 40px -12px rgb(0 0 0 / 0.14), 0 2px 8px -3px rgb(0 0 0 / 0.05);
+
+    /* ── Medidas de layout ───────────────────────────────────────────────────
+       Se usan con sintaxis arbitraria (`max-w-[var(--measure)]`) para que exista
+       un único lugar donde cambiar el ancho de lectura o del panel lateral. */
+
+    /* Ancho de lectura: 768px. Longitud de línea óptima para texto corrido. */
+    --measure: 48rem;
+    --sidebar-width: 17rem;
+    --header-height: 3.25rem;
+
+    /* Gradiente de la marca de IA: recorre la propia paleta institucional, del verde
+       del logotipo al verde MASTERS. No es el logotipo (representa al asistente, no a
+       la universidad), pero su color procede íntegramente del manual. */
+    --brand-from: oklch(0.558 0.162 148);
+    --brand-to: oklch(0.78 0.175 162);
+}
+
+.dark {
+    /* Sobre un lienzo casi negro una sombra suave es invisible: en oscuro la
+       elevación necesita sombras mucho más densas para leerse igual. */
+    --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-lifted: 0 4px 16px -4px rgb(0 0 0 / 0.6), 0 1px 4px -1px rgb(0 0 0 / 0.4);
+    --shadow-float: 0 16px 48px -16px rgb(0 0 0 / 0.72), 0 2px 10px -3px rgb(0 0 0 / 0.5);
+
+    --brand-from: oklch(0.7 0.19 152);
+    --brand-to: oklch(0.852 0.179 165);
+}

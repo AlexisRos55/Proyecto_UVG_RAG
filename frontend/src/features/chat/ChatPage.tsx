@@ -2,36 +2,50 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/features/auth/auth-context";
-import { useAskQuestion, useChatHistory } from "@/features/chat/api";
-import { MessageInput } from "@/features/chat/components/message-input";
-import { MessageList } from "@/features/chat/components/message-list";
-import { Sidebar } from "@/features/chat/components/sidebar";
+import { isBackendOnline, useAskQuestion, useBackendStatus, useChatHistory } from "@/features/chat/api";
+import { ChatHeader } from "@/features/chat/components/chat-header";
+import { Composer } from "@/features/chat/components/composer";
+import { EmptyState } from "@/features/chat/components/empty-state";
+import { MessageThread } from "@/features/chat/components/message-thread";
+import { Sidebar, type ConversationListItem } from "@/features/chat/components/sidebar";
+import { displayNameFromEmail, generateConversationTitle } from "@/features/chat/lib/format";
 import { ApiError } from "@/shared/lib/api-client";
-
-const TITLE_MAX_LENGTH = 42;
 
 export function ChatPage() {
   const { session, logout } = useAuth();
   const { data: conversations, isLoading } = useChatHistory();
+  const { data: healthStatus, isError: healthIsError } = useBackendStatus();
   const askQuestion = useAskQuestion();
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   // "Nueva conversación" (sprint 1, ADR-0011): reinicio visual local. El backend conserva
   // una única conversación activa por estudiante (FR-14); el historial multi-hilo persistente
-  // queda para un sprint futuro.
+  // queda para un sprint futuro — ver docs/07-backlog.md.
   const [clearedAt, setClearedAt] = useState<string | null>(null);
 
+  const activeConversation = conversations?.[0] ?? null;
+
   const messages = useMemo(() => {
-    const allMessages = conversations?.[0]?.messages ?? [];
+    const allMessages = activeConversation?.messages ?? [];
     return clearedAt ? allMessages.filter((m) => m.created_at > clearedAt) : allMessages;
-  }, [conversations, clearedAt]);
+  }, [activeConversation, clearedAt]);
 
   const conversationTitle = useMemo(() => {
     const firstQuestion = messages.find((m) => m.role === "student");
-    if (!firstQuestion) return null;
-    return firstQuestion.content.length > TITLE_MAX_LENGTH
-      ? `${firstQuestion.content.slice(0, TITLE_MAX_LENGTH)}…`
-      : firstQuestion.content;
+    return firstQuestion ? generateConversationTitle(firstQuestion.content) : null;
   }, [messages]);
+
+  const sidebarConversations: ConversationListItem[] = useMemo(() => {
+    if (!activeConversation || !conversationTitle) return [];
+    const lastMessage = messages.at(-1);
+    return [
+      {
+        id: activeConversation.id,
+        title: conversationTitle,
+        updatedAt: lastMessage?.created_at ?? activeConversation.created_at,
+      },
+    ];
+  }, [activeConversation, conversationTitle, messages]);
 
   const handleSend = (question: string) => {
     setPendingQuestion(question);
@@ -44,41 +58,52 @@ export function ChatPage() {
     });
   };
 
+  const isEmpty = messages.length === 0 && !pendingQuestion;
+
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="bg-background flex h-dvh overflow-hidden">
       <Sidebar
         userEmail={session?.email ?? ""}
-        conversationTitle={conversationTitle}
-        onNewChat={() => setClearedAt(new Date().toISOString())}
+        conversations={sidebarConversations}
+        activeConversationId={activeConversation?.id ?? null}
+        onSelectConversation={() => setClearedAt(null)}
+        onNewChat={() => {
+          setClearedAt(new Date().toISOString());
+          setIsSidebarOpen(false);
+        }}
         onLogout={logout}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/40">
-        <header className="flex items-center gap-3 border-b bg-background px-6 py-3.5">
-          <img src="/brand/logo-uvg-altiplano.png" alt="" className="size-7 rounded-md" />
-          <div className="leading-tight">
-            <p className="text-sm font-semibold text-foreground">Asistente Virtual Institucional</p>
-            <p className="text-xs text-muted-foreground">
-              Responde con base en documentos oficiales de UVG Altiplano
-            </p>
-          </div>
-        </header>
+      <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <ChatHeader
+          title={conversationTitle}
+          isOnline={isBackendOnline(healthStatus, healthIsError)}
+          onOpenSidebar={() => setIsSidebarOpen(true)}
+        />
 
-        {isLoading ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-            Cargando conversación…
-          </div>
-        ) : (
-          <MessageList
-            messages={messages}
-            pendingQuestion={pendingQuestion}
-            isAnswering={askQuestion.isPending}
-            onSuggestionSelect={handleSend}
-          />
-        )}
+        {/* El contenido pasa por debajo de la cabecera translúcida: de ahí el
+            padding superior en lugar de un header que ocupe su propia fila. */}
+        <div className="min-h-0 flex-1 overflow-y-auto pt-[var(--header-height)]">
+          {isLoading ? (
+            <p className="text-ui text-muted-foreground pt-24 text-center">Cargando conversación…</p>
+          ) : isEmpty ? (
+            <EmptyState
+              userName={displayNameFromEmail(session?.email ?? "")}
+              onSelect={handleSend}
+            />
+          ) : (
+            <MessageThread
+              messages={messages}
+              pendingQuestion={pendingQuestion}
+              isAnswering={askQuestion.isPending}
+            />
+          )}
+        </div>
 
-        <MessageInput disabled={askQuestion.isPending} onSend={handleSend} />
-      </div>
+        <Composer disabled={askQuestion.isPending} onSend={handleSend} />
+      </main>
     </div>
   );
 }

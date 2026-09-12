@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "./design-system/tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -46,79 +47,143 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+
+    /* Marca institucional UVG: tokens crudos (no semanticos) usados por las superficies
+       de marca -- portal de acceso, cabeceras institucionales. Los tokens semanticos
+       (--primary, --ring, ...) siguen siendo la fuente de verdad para los componentes
+       de shadcn/ui; estos existen para el navy y el azul de accion que la interfaz de
+       marca necesita con independencia del modo claro/oscuro. */
+    --color-uvg-navy: var(--uvg-navy);
+    --color-uvg-navy-deep: var(--uvg-navy-deep);
+    --color-uvg-navy-soft: var(--uvg-navy-soft);
+    --color-uvg-accent: var(--uvg-accent);
+    --color-uvg-accent-strong: var(--uvg-accent-strong);
+    --color-uvg-accent-soft: var(--uvg-accent-soft);
+    --color-uvg-canvas: var(--uvg-canvas);
+    --color-uvg-green-institutional: var(--uvg-green-institutional);
+    --color-uvg-green-protocol: var(--uvg-green-protocol);
+    --color-uvg-green-masters: var(--uvg-green-masters);
+
+    /* Superficie elevada sin borde: en claro es blanco puro sobre gris; en oscuro
+       es un velo blanco translúcido sobre el lienzo. Es el reemplazo de `border`
+       en toda la experiencia de chat -- la elevación la da la sombra, no la línea. */
+    --color-surface-raised: var(--surface-raised);
+    --color-surface-raised-hover: var(--surface-raised-hover);
+    /* Línea de separación mínima, reservada para los pocos casos estructurales. */
+    --color-hairline: var(--hairline);
 }
 
 :root {
     --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --foreground: oklch(0.16 0 0);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.16 0 0);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    /* Institucional: azul marino #0C3D5B del Manual de Normas Graficas UVG (marzo 2025,
-       paleta de colores secundarios) -- antes gris neutro de la plantilla. */
-    --primary: oklch(0.345 0.072 241);
+    --popover-foreground: oklch(0.16 0 0);
+    /* Acento de identidad: VERDE INSTITUCIONAL #008C36, el tono del logotipo segun el
+       Manual de Normas Graficas (marzo 2025, pag. 10). Se usa solo como acento --
+       indicadores, estado activo, foco, enlaces, iconos -- nunca como superficie. */
+    --primary: oklch(0.558 0.162 148);
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.345 0.072 241);
+    --secondary-foreground: oklch(0.2 0 0);
     --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.95 0.02 241);
-    --accent-foreground: oklch(0.345 0.072 241);
+    --muted-foreground: oklch(0.5 0 0);
+    --accent: oklch(0.955 0.014 148);
+    --accent-foreground: oklch(0.558 0.162 148);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.6 0.09 241);
+    --border: oklch(0.93 0 0);
+    --input: oklch(0.93 0 0);
+    --ring: oklch(0.558 0.162 148 / 45%);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    /* Sidebar institucional: superficie navy oscura y fija (independiente del modo claro/
-       oscuro general de la app), al estilo Slack/Notion, para reforzar la marca UVG. */
-    --sidebar: oklch(0.24 0.05 241);
-    --sidebar-foreground: oklch(0.96 0.006 241);
-    --sidebar-primary: oklch(0.5 0.09 241);
+    --radius: 0.75rem;
+    --surface-raised: oklch(1 0 0);
+    --surface-raised-hover: oklch(0.975 0 0);
+    --hairline: oklch(0 0 0 / 7%);
+    /* ---- Paleta oficial UVG (Manual de Normas Graficas, marzo 2025) ----------------
+       Los cuatro verdes de la pag. 10, con el uso que el propio manual les asigna:
+         institucional -> logotipo y comunicacion institucional  (acento en modo claro)
+         protocolo     -> "elegancia y sofisticacion"            (capa ambiental/glow)
+         masters       -> "tono moderno"                         (acento en modo oscuro)
+         comercial     -> campanas publicitarias                 (no se usa en la UI)
+       El verde comercial se declara solo para dejar constancia de la paleta completa. */
+    --uvg-green-institutional: #008c36;
+    --uvg-green-protocol: #004533;
+    --uvg-green-masters: #0df2b0;
+    --uvg-green-commercial: #00c400;
+
+    /* Azul marino institucional #0C3D5B (paleta comercial, pag. 9): superficie de marca
+       del portal de acceso. Verde + navy es la combinacion oficial de UVG.
+
+       El acento de accion era #2563EB, un azul que NO figura en ninguna pagina del
+       manual: se habia elegido por criterio propio. Se sustituye por el verde
+       institucional para que el portal de acceso y el producto compartan una sola
+       identidad, y para que el color provenga de la paleta oficial. */
+    --uvg-navy: #0c3d5b;
+    --uvg-navy-deep: #06263a;
+    --uvg-navy-soft: #14536f;
+    --uvg-accent: #008c36;
+    --uvg-accent-strong: #00702b;
+    --uvg-accent-soft: #edf8f1;
+    --uvg-canvas: #f6f8fc;
+    /* Sidebar: superficie neutra apenas distinta del lienzo principal -- ya no un bloque
+       de color de marca (rediseño premium: el navy queda solo para el portal de acceso).
+       El acento azul solo aparece en el estado activo/foco, nunca como fondo del panel. */
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.2 0 0);
+    --sidebar-primary: oklch(0.558 0.162 148);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.32 0.055 241);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 12%);
-    --sidebar-ring: oklch(0.6 0.09 241);
+    --sidebar-accent: oklch(0.94 0 0);
+    --sidebar-accent-foreground: oklch(0.16 0 0);
+    --sidebar-border: oklch(0.9 0 0);
+    --sidebar-ring: oklch(0.558 0.162 148 / 45%);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.65 0.09 241);
-    --primary-foreground: oklch(0.145 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    /* Escala fria, nunca negro puro: cada nivel es un escalon de "elevacion" sobre el
+       anterior (0B0B0C fondo -> 111214 tarjeta/sidebar -> 17181B popover -> 1D1F23 hover). */
+    --background: #0b0b0c;
+    --foreground: oklch(0.94 0 0);
+    --card: #111214;
+    --card-foreground: oklch(0.94 0 0);
+    --popover: #17181b;
+    --popover-foreground: oklch(0.94 0 0);
+    /* El verde institucional (#008C36, L=0.56) no alcanza contraste legible sobre un
+       lienzo casi negro. En lugar de aclararlo por cuenta propia se adopta el VERDE
+       MASTERS #0DF2B0, que el manual define como "un tono moderno" (pag. 10): la
+       adaptacion al modo oscuro queda fundamentada en la propia paleta oficial. */
+    --primary: oklch(0.852 0.179 165);
+    --primary-foreground: oklch(0.16 0 0);
+    --secondary: #1d1f23;
+    --secondary-foreground: oklch(0.94 0 0);
+    --muted: #1d1f23;
+    --muted-foreground: oklch(0.63 0 0);
+    --accent: #1d1f23;
+    --accent-foreground: oklch(0.852 0.179 165);
     --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.65 0.09 241);
+    --border: oklch(1 0 0 / 9%);
+    --input: oklch(1 0 0 / 12%);
+    --ring: oklch(0.852 0.179 165 / 45%);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.24 0.05 241);
-    --sidebar-foreground: oklch(0.96 0.006 241);
-    --sidebar-primary: oklch(0.5 0.09 241);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.32 0.055 241);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 12%);
-    --sidebar-ring: oklch(0.6 0.09 241);
+    --surface-raised: oklch(1 0 0 / 7%);
+    --surface-raised-hover: oklch(1 0 0 / 11%);
+    --hairline: oklch(1 0 0 / 8%);
+    --sidebar: #111214;
+    --sidebar-foreground: oklch(0.94 0 0);
+    --sidebar-primary: oklch(0.852 0.179 165);
+    --sidebar-primary-foreground: oklch(0.16 0 0);
+    --sidebar-accent: #1d1f23;
+    --sidebar-accent-foreground: oklch(0.94 0 0);
+    --sidebar-border: oklch(1 0 0 / 9%);
+    --sidebar-ring: oklch(0.852 0.179 165 / 45%);
 }
 
 @layer base {
@@ -127,8 +192,38 @@
     }
   body {
     @apply bg-background text-foreground;
+    /* Suavizado tipo macOS: sin esto la tipografía en fondos oscuros se ve
+       engrosada y delata "página web" en vez de aplicación nativa. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     }
   html {
     @apply font-sans;
     }
+}
+
+/* Scroll discreto (Linear/Vercel): visible solo lo necesario, sin la barra ancha por
+   defecto del sistema. Solo WebKit/Blink -- Firefox cae de vuelta a su scrollbar nativa. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+    background-clip: content-box;
+  }
 }
