@@ -1,17 +1,14 @@
 import { useId, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { MotionConfig } from "framer-motion";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { Separator } from "@/components/ui/separator";
+import { AuthLayout } from "@/features/auth/components/auth-layout";
 import { FormAlert } from "@/features/auth/components/form-alert";
-import { HeroSection } from "@/features/auth/components/hero-section";
 import { InfoPanel } from "@/features/auth/components/info-panel";
 import { LoginCard } from "@/features/auth/components/login-card";
-import { LoginFooter } from "@/features/auth/components/login-footer";
 import { LoginForm } from "@/features/auth/components/login-form";
 import { MicrosoftLogo } from "@/features/auth/components/microsoft-logo";
-import { MobileBrandBar } from "@/features/auth/components/mobile-brand-bar";
 import { SocialLoginButton } from "@/features/auth/components/social-login-button";
 import { useAuth } from "@/features/auth/auth-context";
 import type { LoginFormValues } from "@/features/auth/schemas";
@@ -31,14 +28,18 @@ const GENERIC_LOGIN_ERROR = "No se pudo iniciar sesión. Inténtalo de nuevo en 
 
 /** Portal de acceso institucional: panel de marca (45%) + formulario centrado (55%). */
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, sessionExpired } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [notice, setNotice] = useState<string | null>(null);
   const noticeId = useId();
 
+  // Destino guardado por la ruta protegida: se devuelve al usuario donde iba.
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/chat";
+
   const mutation = useMutation<void, unknown, LoginFormValues>({
     mutationFn: (values) => login(values),
-    onSuccess: () => navigate("/chat", { replace: true }),
+    onSuccess: () => navigate(redirectTo, { replace: true }),
   });
 
   const errorMessage = mutation.isError
@@ -47,35 +48,22 @@ export function LoginPage() {
       : GENERIC_LOGIN_ERROR
     : null;
 
+  // Se explica por qué se pide iniciar sesión otra vez, en vez de devolver al
+  // usuario a un formulario vacío sin motivo aparente.
+  const expiredNotice = sessionExpired
+    ? "Tu sesión expiró por seguridad. Vuelve a iniciar sesión para continuar."
+    : null;
+
   const handleSubmit = (values: LoginFormValues) => {
     setNotice(null);
     mutation.mutate(values);
   };
 
   return (
-    <MotionConfig reducedMotion="user">
-      {/* `grid-rows-[auto]` y no `grid-rows-1`: la utilidad numérica compila a
-          `minmax(0,1fr)`, que elimina el suelo de altura mínima de la fila y recorta el
-          panel institucional en pantallas bajas. Una fila `auto` se estira igual hasta
-          `min-h-svh` pero crece cuando el contenido no cabe. */}
-      <div className="grid min-h-svh grid-rows-[auto_1fr] bg-uvg-canvas lg:grid-cols-[45fr_55fr] lg:grid-rows-[auto]">
-        <MobileBrandBar />
-        <HeroSection />
-
-        <main className="relative flex min-w-0 items-center justify-center px-5 py-10 sm:px-8 sm:py-12 xl:py-14">
-          {/* Textura del lienzo: halo azul superior y retícula muy tenue */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(65%_45%_at_50%_0%,rgb(0_140_54/0.07),transparent_70%)]"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgb(15_23_42/0.028)_1px,transparent_1px),linear-gradient(90deg,rgb(15_23_42/0.028)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:radial-gradient(70%_55%_at_50%_45%,black,transparent)]"
-          />
-
-          <div className="relative flex w-full flex-col items-center gap-7">
+    <AuthLayout>
             <LoginCard title="Bienvenido" subtitle="Inicia sesión con tu cuenta institucional.">
               <FormAlert message={errorMessage} />
+              {!errorMessage && <FormAlert message={expiredNotice} tone="info" />}
 
               <LoginForm
                 isPending={mutation.isPending}
@@ -85,9 +73,9 @@ export function LoginPage() {
               />
 
               <div className="flex items-center gap-3">
-                <Separator className="flex-1 bg-slate-200" />
-                <span className="text-xs font-medium text-slate-400">o</span>
-                <Separator className="flex-1 bg-slate-200" />
+                <Separator className="flex-1 bg-border" />
+                <span className="text-caption font-medium text-text-tertiary">o</span>
+                <Separator className="flex-1 bg-border" />
               </div>
 
               <div className="flex flex-col gap-4">
@@ -105,12 +93,18 @@ export function LoginPage() {
                   Guatemala.
                 </InfoPanel>
               </div>
-            </LoginCard>
 
-            <LoginFooter />
-          </div>
-        </main>
-      </div>
-    </MotionConfig>
+              {/* Antes /register era inalcanzable: solo existía el enlace inverso. */}
+              <p className="text-caption text-muted-foreground text-center">
+                ¿Aún no tienes cuenta?{" "}
+                <Link
+                  to="/register"
+                  className="text-primary hover:text-uvg-accent-strong focus-visible:ring-ring rounded font-medium underline-offset-4 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  Crear una
+                </Link>
+              </p>
+      </LoginCard>
+    </AuthLayout>
   );
 }

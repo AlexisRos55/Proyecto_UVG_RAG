@@ -27,7 +27,7 @@ export function LoginCard({ title, subtitle, children }: LoginCardProps) {
       animate="visible"
       className="w-full max-w-[27.5rem]"
     >
-      <Card className="rounded-2xl bg-white shadow-[0_1px_2px_rgb(12_61_91/0.04),0_18px_50px_-20px_rgb(12_61_91/0.22)] ring-1 ring-slate-900/[0.06] [--card-spacing:--spacing(7)] sm:[--card-spacing:--spacing(8)] xl:[--card-spacing:--spacing(9)]">
+      <Card className="rounded-2xl bg-card shadow-[0_1px_2px_rgb(12_61_91/0.04),0_18px_50px_-20px_rgb(12_61_91/0.22)] ring-1 ring-border [--card-spacing:--spacing(7)] sm:[--card-spacing:--spacing(8)] xl:[--card-spacing:--spacing(9)]">
         <CardContent className="flex flex-col gap-7">
           <header className="flex flex-col gap-5">
             <img
@@ -35,12 +35,14 @@ export function LoginCard({ title, subtitle, children }: LoginCardProps) {
               alt="Universidad del Valle de Guatemala, Campus Altiplano"
               className="h-8 w-auto self-start"
             />
-            <Separator className="bg-slate-100" />
+            <Separator className="bg-muted" />
             <div className="flex flex-col gap-1.5">
-              <h2 className="font-heading text-[1.75rem] leading-tight font-semibold tracking-[-0.025em] text-uvg-navy">
+              {/* Token semántico y no el navy institucional: sobre la tarjeta oscura
+                  el #0C3D5B queda por debajo del contraste mínimo legible. */}
+              <h2 className="font-heading text-foreground text-[1.75rem] leading-tight font-semibold tracking-[-0.025em]">
                 {title}
               </h2>
-              <p className="text-[0.9375rem] leading-6 text-slate-500">{subtitle}</p>
+              <p className="text-[0.9375rem] leading-6 text-muted-foreground">{subtitle}</p>
             </div>
           </header>
 

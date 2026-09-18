@@ -15,7 +15,9 @@ from app.application.use_cases.ingest_document import IngestDocumentUseCase
 from app.infrastructure.adapters.document_processing.document_indexing_pipeline import (
     DocumentIndexingPipeline,
 )
-from app.infrastructure.adapters.document_processing.pymupdf_extractor import PyMuPDFExtractorAdapter
+from app.infrastructure.adapters.document_processing.pymupdf_extractor import (
+    PyMuPDFExtractorAdapter,
+)
 from app.infrastructure.adapters.vector_store.chroma_vector_store import ChromaVectorStoreAdapter
 from app.infrastructure.adapters.vector_store.sentence_transformers_embedding import (
     SentenceTransformersEmbeddingAdapter,

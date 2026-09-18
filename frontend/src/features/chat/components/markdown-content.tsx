@@ -99,7 +99,7 @@ const markdownComponents: Components = {
 
 export function MarkdownContent({ content, className }: { content: string; className?: string }) {
   return (
-    <div className={cn("text-body text-foreground/85", className)}>
+    <div className={cn("text-body text-foreground", className)}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
         {content}
       </ReactMarkdown>

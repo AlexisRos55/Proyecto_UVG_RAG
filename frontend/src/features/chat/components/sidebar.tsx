@@ -1,6 +1,7 @@
 import { cn } from "cn";
 import { AnimatePresence, motion } from "framer-motion";
-import { LogOut, MessageSquare, Plus, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { FolderCog, LogOut, MessageSquare, Plus, X } from "lucide-react";
 
 import { BrandLockup } from "@/design-system/brand";
 import { IconButton } from "@/design-system/icon-button";
@@ -16,6 +17,9 @@ export interface ConversationListItem {
 
 interface SidebarProps {
   userEmail: string;
+  /** Muestra el acceso a la gestión documental. Antes esa sección solo era
+   *  alcanzable tecleando la URL: existía pero nadie podía descubrirla. */
+  isAdmin: boolean;
   conversations: ConversationListItem[];
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
@@ -63,7 +67,7 @@ function ConversationRow({
       <MessageSquare
         className={cn(
           "size-3.5 shrink-0 transition-colors",
-          isActive ? "text-primary" : "text-muted-foreground/50",
+          isActive ? "text-primary" : "text-text-tertiary",
         )}
         strokeWidth={1.75}
       />
@@ -71,12 +75,12 @@ function ConversationRow({
         <span
           className={cn(
             "text-ui truncate transition-colors",
-            isActive ? "text-foreground" : "text-foreground/75",
+            isActive ? "text-foreground" : "text-muted-foreground",
           )}
         >
           {conversation.title}
         </span>
-        <span className="text-micro text-muted-foreground/60 tracking-normal">
+        <span className="text-micro text-text-tertiary tracking-normal">
           {formatRelativeDate(conversation.updatedAt)}
         </span>
       </span>
@@ -86,6 +90,7 @@ function ConversationRow({
 
 function SidebarContent({
   userEmail,
+  isAdmin,
   conversations,
   activeConversationId,
   onSelectConversation,
@@ -138,12 +143,12 @@ function SidebarContent({
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-y-auto px-3 pt-6">
-        <p className="text-micro text-muted-foreground/55 px-2.5 pb-2 font-semibold uppercase">
+        <p className="text-micro text-text-tertiary px-2.5 pb-2 font-semibold uppercase">
           Reciente
         </p>
 
         {conversations.length === 0 ? (
-          <p className="text-caption text-muted-foreground/60 px-2.5">
+          <p className="text-caption text-text-tertiary px-2.5">
             Tus conversaciones aparecerán aquí.
           </p>
         ) : (
@@ -160,6 +165,23 @@ function SidebarContent({
           </ul>
         )}
       </div>
+
+      {isAdmin && (
+        <div className="relative px-3 pb-1">
+          <Link
+            to="/admin"
+            onClick={onCloseMobile}
+            className={cn(
+              "text-ui text-muted-foreground hover:text-foreground flex w-full items-center gap-2.5 rounded-lg px-3 py-2",
+              "hover:bg-foreground/[0.035] transition-colors duration-150 ease-soft",
+              "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+            )}
+          >
+            <FolderCog className="size-4 shrink-0" strokeWidth={1.75} />
+            Documentos oficiales
+          </Link>
+        </div>
+      )}
 
       {/* Sin línea divisoria: la separación la da el espacio, no un borde. */}
       <div className="relative flex items-center gap-1 px-3 pt-3 pb-4">

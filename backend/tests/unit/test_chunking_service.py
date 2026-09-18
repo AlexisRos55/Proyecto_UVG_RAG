@@ -1,4 +1,6 @@
-from app.infrastructure.adapters.document_processing.chunking_service import FixedSizeChunkingService
+from app.infrastructure.adapters.document_processing.chunking_service import (
+    FixedSizeChunkingService,
+)
 
 
 def test_split_respects_chunk_size_and_overlap() -> None:

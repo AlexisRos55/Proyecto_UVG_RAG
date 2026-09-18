@@ -47,12 +47,12 @@ export function EmptyState({ userName, onSelect }: EmptyStateProps) {
       <motion.h1 variants={fadeRise} className="text-display text-foreground mt-9">
         {userName ? `Hola, ${userName}.` : "Hola."}
       </motion.h1>
-      <motion.p variants={fadeRise} className="text-title text-muted-foreground/80 mt-3">
+      <motion.p variants={fadeRise} className="text-title text-muted-foreground mt-3">
         Bienvenido al Asistente Inteligente <span className="text-primary">UVG</span>
       </motion.p>
       <motion.p
         variants={fadeRise}
-        className="text-body text-muted-foreground/65 mt-4 max-w-md text-balance"
+        className="text-body text-muted-foreground mt-4 max-w-md text-balance"
       >
         Consulta reglamentos, beneficios, procesos académicos y documentación oficial mediante
         Inteligencia Artificial.
@@ -74,7 +74,7 @@ export function EmptyState({ userName, onSelect }: EmptyStateProps) {
               className="bg-primary absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               aria-hidden="true"
             />
-            <span className="text-body text-foreground/80 group-hover:text-foreground transition-colors">
+            <span className="text-body text-foreground group-hover:text-foreground transition-colors">
               {question}
             </span>
             <ArrowUpRight
@@ -87,7 +87,7 @@ export function EmptyState({ userName, onSelect }: EmptyStateProps) {
 
       <motion.p
         variants={fadeRise}
-        className="text-caption text-muted-foreground/55 mt-14 max-w-sm leading-relaxed"
+        className="text-caption text-text-tertiary mt-14 max-w-sm leading-relaxed"
       >
         Las respuestas se generan únicamente a partir de documentos oficiales indexados de la
         Universidad del Valle de Guatemala, Campus Altiplano.

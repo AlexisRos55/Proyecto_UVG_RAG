@@ -65,7 +65,7 @@ export function LoginForm({ isPending, isSuccess = false, onSubmit, onForgotPass
           <button
             type="button"
             onClick={onForgotPassword}
-            className="rounded text-[0.8125rem] font-medium text-uvg-accent transition-colors duration-200 outline-none hover:text-uvg-accent-strong hover:underline focus-visible:ring-3 focus-visible:ring-uvg-accent/25 focus-visible:underline"
+            className="rounded text-caption font-medium text-uvg-accent transition-colors duration-200 outline-none hover:text-uvg-accent-strong hover:underline focus-visible:ring-3 focus-visible:ring-uvg-accent/25 focus-visible:underline"
           >
             ¿Olvidaste tu contraseña?
           </button>
@@ -85,13 +85,13 @@ export function LoginForm({ isPending, isSuccess = false, onSubmit, onForgotPass
               onBlur={field.onBlur}
               ref={field.ref}
               disabled={isLocked}
-              className="size-[1.05rem] rounded-[5px] border-slate-300 data-[state=checked]:border-uvg-accent data-[state=checked]:bg-uvg-accent focus-visible:border-uvg-accent focus-visible:ring-uvg-accent/25"
+              className="size-[1.05rem] rounded-[5px] border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary focus-visible:border-uvg-accent focus-visible:ring-uvg-accent/25"
             />
           )}
         />
         <label
           htmlFor={rememberMeId}
-          className="cursor-pointer text-[0.8125rem] text-slate-600 select-none"
+          className="cursor-pointer text-caption text-muted-foreground select-none"
         >
           Mantener sesión iniciada
         </label>

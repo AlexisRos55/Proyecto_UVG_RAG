@@ -64,7 +64,7 @@ export function BrandLockup({ className, compact = false }: BrandLockupProps) {
           UVG <span className="text-primary">AI</span>
         </span>
         {!compact && (
-          <span className="text-micro text-muted-foreground/60 flex flex-col leading-[1.35] tracking-normal normal-case">
+          <span className="text-micro text-text-tertiary flex flex-col leading-[1.35] tracking-normal normal-case">
             <span className="truncate">Universidad del Valle de Guatemala</span>
             <span className="truncate">Campus Altiplano</span>
           </span>

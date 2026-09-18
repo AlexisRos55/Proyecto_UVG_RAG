@@ -70,7 +70,7 @@ export function Composer({ disabled, onSend }: ComposerProps) {
             rows={1}
             disabled={disabled}
             aria-label="Escribe tu consulta"
-            className="text-body placeholder:text-muted-foreground/55 min-h-9 flex-1 resize-none bg-transparent py-1.5 outline-none disabled:opacity-60"
+            className="text-body placeholder:text-text-tertiary min-h-9 flex-1 resize-none bg-transparent py-1.5 outline-none disabled:opacity-60"
           />
 
           <AnimatePresence initial={false}>
@@ -99,7 +99,7 @@ export function Composer({ disabled, onSend }: ComposerProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={transition.micro}
-              className="text-micro text-muted-foreground/50 mt-2.5 text-center tracking-normal"
+              className="text-micro text-text-tertiary mt-2.5 text-center tracking-normal"
             >
               Enter para enviar · Shift + Enter para una nueva línea
             </motion.p>

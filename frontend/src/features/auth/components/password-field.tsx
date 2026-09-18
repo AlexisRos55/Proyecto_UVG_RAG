@@ -28,7 +28,7 @@ export function PasswordField({ disabled, ...props }: PasswordFieldProps) {
           disabled={disabled}
           aria-pressed={isVisible}
           aria-label={isVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
-          className="flex size-8 items-center justify-center rounded-lg text-slate-400 transition-colors duration-200 outline-none hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-3 focus-visible:ring-uvg-accent/25 focus-visible:text-slate-600 disabled:pointer-events-none disabled:opacity-50"
+          className="flex size-8 items-center justify-center rounded-lg text-text-tertiary transition-colors duration-200 outline-none hover:bg-muted hover:text-muted-foreground focus-visible:ring-3 focus-visible:ring-uvg-accent/25 focus-visible:text-muted-foreground disabled:pointer-events-none disabled:opacity-50"
         >
           <Icon className="size-4" aria-hidden="true" />
         </button>

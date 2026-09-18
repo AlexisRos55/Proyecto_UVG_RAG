@@ -23,7 +23,7 @@ const TONE_STYLES: Record<AlertTone, { container: string; icon: string; text: st
   info: {
     container: "bg-uvg-accent-soft ring-uvg-accent/15",
     icon: "text-uvg-accent",
-    text: "text-slate-600",
+    text: "text-muted-foreground",
   },
 };
 
@@ -60,7 +60,7 @@ export function FormAlert({ message, tone = "error", id }: FormAlertProps) {
             )}
           >
             <Icon className={cn("mt-px size-4 shrink-0", styles.icon)} aria-hidden="true" />
-            <p className={cn("text-[0.8125rem] leading-5 font-medium", styles.text)}>{message}</p>
+            <p className={cn("text-caption leading-5 font-medium", styles.text)}>{message}</p>
           </div>
         </motion.div>
       ) : null}

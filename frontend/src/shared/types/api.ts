@@ -21,8 +21,11 @@ export interface AnswerResponse {
   message_id: string;
   conversation_id: string;
   answer_text: string;
-  is_grounded: boolean;
-  confidence: VerificationConfidence;
+  // Nulos cuando la respuesta la resolvió una habilidad local (saludo, identidad,
+  // guía): no es una afirmación sobre la normativa, así que no se evalúa contra
+  // documentos ni lleva fuentes.
+  is_grounded: boolean | null;
+  confidence: VerificationConfidence | null;
   created_at: string;
   sources: SourceReference[];
 }

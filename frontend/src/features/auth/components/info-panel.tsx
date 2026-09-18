@@ -20,7 +20,7 @@ export function InfoPanel({ icon, children, className }: InfoPanelProps) {
       <span aria-hidden="true" className="mt-px flex text-uvg-accent [&_svg]:size-4">
         {icon ?? <ShieldCheck />}
       </span>
-      <p className="text-[0.78125rem] leading-5 text-slate-600">{children}</p>
+      <p className="text-caption leading-5 text-muted-foreground">{children}</p>
     </div>
   );
 }

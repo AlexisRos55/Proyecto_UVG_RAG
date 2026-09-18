@@ -1,6 +1,15 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
-import { apiClient } from "@/shared/lib/api-client";
+import { apiClient, setSessionExpiredHandler } from "@/shared/lib/api-client";
 import type { AuthResponse, UserRole } from "@/shared/types/api";
 
 interface Session {
@@ -25,6 +34,9 @@ interface AuthContextValue {
   session: Session | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  /** Cierta cuando la sesión terminó por rechazo del servidor y no por decisión
+   *  del usuario. Permite explicar por qué se pide iniciar sesión de nuevo. */
+  sessionExpired: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -77,15 +89,40 @@ function clearStoredSession(): void {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(loadStoredSession);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const persistSession = useCallback((next: Session, persistent: boolean) => {
     setSession(next);
+    setSessionExpired(false);
     clearStoredSession();
     try {
       storageFor(persistent).setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
       // almacenamiento no disponible: la sesión sólo vive en memoria
     }
+  }, []);
+
+  /**
+   * Un único punto de salida ante un 401. Antes no existía: con el token vencido
+   * las consultas fallaban en silencio y el chat mostraba la pantalla de
+   * bienvenida como si el usuario acabara de llegar, aparentando pérdida de datos.
+   *
+   * La sesión vigente se consulta por referencia y no por dependencia del efecto,
+   * para registrar el manejador una sola vez sin leer un valor obsoleto.
+   */
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      // Varias consultas pueden fallar a la vez: solo la primera cierra la sesión.
+      if (sessionRef.current === null) return;
+      sessionRef.current = null;
+      clearStoredSession();
+      setSession(null);
+      setSessionExpired(true);
+    });
+    return () => setSessionExpiredHandler(null);
   }, []);
 
   const login = useCallback(
@@ -106,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setSession(null);
+    setSessionExpired(false);
     clearStoredSession();
   }, []);
 
@@ -114,11 +152,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isAuthenticated: session !== null,
       isAdmin: session?.role === "admin",
+      sessionExpired,
       login,
       register,
       logout,
     }),
-    [session, login, register, logout],
+    [session, sessionExpired, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

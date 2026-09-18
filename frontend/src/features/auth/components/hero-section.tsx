@@ -55,7 +55,7 @@ export function HeroSection() {
             alt="Universidad del Valle de Guatemala, Campus Altiplano"
             className="h-10 w-auto xl:h-12"
           />
-          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[0.6875rem] font-semibold tracking-[0.14em] text-white/80 uppercase ring-1 ring-white/15 backdrop-blur-sm">
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-micro font-semibold tracking-[0.14em] text-white/80 uppercase ring-1 ring-white/15 backdrop-blur-sm">
             Campus Altiplano
           </span>
         </motion.header>
@@ -63,14 +63,14 @@ export function HeroSection() {
         {/* motion.div y no div: las variantes sólo se propagan a través de nodos motion. */}
         <motion.div className="flex flex-col gap-7 xl:gap-9">
           <motion.div variants={fadeSlideUp} className="flex flex-col gap-4">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/[0.08] py-1.5 pr-3.5 pl-2 text-xs font-medium text-white/85 ring-1 ring-white/15 backdrop-blur-sm">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/[0.08] py-1.5 pr-3.5 pl-2 text-caption font-medium text-white/85 ring-1 ring-white/15 backdrop-blur-sm">
               <Sparkles className="text-uvg-green-masters size-3.5" aria-hidden="true" />
               Plataforma institucional con IA
             </span>
             <h1 className="font-heading max-w-[13ch] text-[2.5rem] leading-[1.06] font-semibold tracking-[-0.03em] text-white xl:text-[3.25rem]">
               Asistente Inteligente UVG
             </h1>
-            <p className="max-w-[46ch] text-[1.0625rem] leading-relaxed text-white/70">
+            <p className="max-w-[46ch] text-body leading-relaxed text-white/70">
               Plataforma institucional basada en Inteligencia Artificial para apoyar a
               estudiantes, docentes y personal administrativo.
             </p>
@@ -92,8 +92,8 @@ export function HeroSection() {
                   <Icon className="size-[1.05rem] text-white" strokeWidth={1.75} />
                 </span>
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-white">{title}</span>
-                  <span className="text-xs text-white/55">{description}</span>
+                  <span className="text-ui font-semibold text-white">{title}</span>
+                  <span className="text-caption text-white/55">{description}</span>
                 </span>
               </motion.li>
             ))}

@@ -19,7 +19,15 @@ createRoot(document.getElementById("root")!).render(
           <BrowserRouter>
             <App />
           </BrowserRouter>
-          <Toaster richColors position="top-right" />
+          {/* Abajo al centro: la confirmación aparece cerca del compositor y de los
+              controles de la lista, que es donde el usuario está mirando cuando
+              actúa. En la esquina superior derecha pasaba desapercibida. */}
+          <Toaster
+            richColors
+            position="bottom-center"
+            closeButton
+            toastOptions={{ duration: 4500 }}
+          />
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

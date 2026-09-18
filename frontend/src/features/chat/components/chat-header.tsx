@@ -26,7 +26,7 @@ export function ChatHeader({ title, isOnline, onOpenSidebar }: ChatHeaderProps) 
       </div>
 
       {title && (
-        <p className="text-ui text-muted-foreground/80 hidden min-w-0 flex-1 truncate lg:block">
+        <p className="text-ui text-muted-foreground hidden min-w-0 flex-1 truncate lg:block">
           {title}
         </p>
       )}
@@ -42,7 +42,7 @@ export function ChatHeader({ title, isOnline, onOpenSidebar }: ChatHeaderProps) 
             className={`relative inline-flex size-1.5 rounded-full ${isOnline ? "bg-primary" : "bg-destructive"}`}
           />
         </span>
-        <span className="text-caption text-muted-foreground/70 hidden sm:inline">
+        <span className="text-caption text-muted-foreground hidden sm:inline">
           {isOnline ? "En línea" : "Sin conexión"}
         </span>
       </div>

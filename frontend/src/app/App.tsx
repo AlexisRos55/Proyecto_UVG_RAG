@@ -5,12 +5,14 @@ import { AdminRoute, ProtectedRoute } from "@/features/auth/protected-route";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
 import { ChatPage } from "@/features/chat/ChatPage";
+import { ForbiddenPage, NotFoundPage } from "@/features/system/status-pages";
 
 export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/sin-permiso" element={<ForbiddenPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/chat" element={<ChatPage />} />
@@ -20,7 +22,9 @@ export function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/chat" replace />} />
+      <Route path="/" element={<Navigate to="/chat" replace />} />
+      {/* Una dirección desconocida se explica, no se redirige en silencio. */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

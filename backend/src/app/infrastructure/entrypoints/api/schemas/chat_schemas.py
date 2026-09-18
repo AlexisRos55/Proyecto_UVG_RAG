@@ -29,8 +29,8 @@ class AnswerResponseSchema(BaseModel):
     message_id: UUID
     conversation_id: UUID
     answer_text: str
-    is_grounded: bool
-    confidence: VerificationConfidence
+    is_grounded: bool | None
+    confidence: VerificationConfidence | None
     created_at: datetime
     sources: list[SourceReferenceSchema]
 

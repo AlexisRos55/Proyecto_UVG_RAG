@@ -2,7 +2,8 @@ import pytest
 
 from app.application.dto.chat_dto import AnswerQueryRequest
 from app.application.use_cases.answer_student_query import (
-    NO_INFORMATION_MESSAGE,
+    NO_RETRIEVAL_MESSAGE,
+    NOT_GROUNDED_MESSAGE,
     AnswerStudentQueryUseCase,
 )
 from app.domain.entities.document import Document, DocumentStatus
@@ -92,7 +93,7 @@ async def test_abstains_without_calling_llm_when_no_relevant_context() -> None:
     response = await use_case.execute(AnswerQueryRequest(user_id=new_id(), question="¿Cuál es la capital de Francia?"))
 
     assert response.is_grounded is False
-    assert response.answer_text == NO_INFORMATION_MESSAGE
+    assert response.answer_text == NO_RETRIEVAL_MESSAGE
     assert response.sources == ()
     assert verification.received_questions == []  # NFR-02: no token spent when there is no context
 
@@ -125,7 +126,7 @@ async def test_abstains_when_verification_marks_answer_as_not_grounded() -> None
     response = await use_case.execute(AnswerQueryRequest(user_id=new_id(), question="pregunta ambigua"))
 
     assert response.is_grounded is False
-    assert response.answer_text == NO_INFORMATION_MESSAGE
+    assert response.answer_text == NOT_GROUNDED_MESSAGE
     assert response.sources == ()
 
 

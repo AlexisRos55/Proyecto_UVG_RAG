@@ -65,8 +65,13 @@ class SingleCallVerificationAdapter(VerificationStrategyPort):
     def __init__(self, llm_port: LLMPort) -> None:
         self._llm_port = llm_port
 
-    async def answer(self, question: str, context_chunks: Sequence[RetrievedChunk]) -> VerifiedAnswer:
-        user_prompt = self._build_user_prompt(question, context_chunks)
+    async def answer(
+        self,
+        question: str,
+        context_chunks: Sequence[RetrievedChunk],
+        style_directive: str | None = None,
+    ) -> VerifiedAnswer:
+        user_prompt = self._build_user_prompt(question, context_chunks, style_directive)
 
         completion = await self._llm_port.complete(
             system_prompt=_SYSTEM_PROMPT,
@@ -77,14 +82,24 @@ class SingleCallVerificationAdapter(VerificationStrategyPort):
         return self._parse(completion)
 
     @staticmethod
-    def _build_user_prompt(question: str, context_chunks: Sequence[RetrievedChunk]) -> str:
+    def _build_user_prompt(
+        question: str,
+        context_chunks: Sequence[RetrievedChunk],
+        style_directive: str | None = None,
+    ) -> str:
         context_block = "\n\n".join(
             f"[Fragmento {index + 1}]\n{retrieved.chunk.text}"
             for index, retrieved in enumerate(context_chunks)
         )
+        # La directiva va al final y sólo afecta a la forma: las reglas de
+        # fundamentación del prompt de sistema siguen mandando sobre el fondo.
+        format_block = (
+            f"\n\nFORMATO DE LA RESPUESTA:\n{style_directive}" if style_directive else ""
+        )
         return (
             f"CONTEXTO RECUPERADO:\n{context_block}\n\n"
             f"PREGUNTA DEL ESTUDIANTE:\n{question}"
+            f"{format_block}"
         )
 
     @staticmethod
