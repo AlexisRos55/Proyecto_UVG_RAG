@@ -54,8 +54,8 @@ export function EmptyState({ userName, onSelect }: EmptyStateProps) {
         variants={fadeRise}
         className="text-body text-muted-foreground mt-4 max-w-md text-balance"
       >
-        Consulta reglamentos, beneficios, procesos académicos y documentación oficial mediante
-        Inteligencia Artificial.
+        Pregunta por reglamentos, becas, seguro estudiantil o cualquier proceso académico del
+        campus.
       </motion.p>
 
       <motion.div variants={fadeRise} className="mt-12 w-full max-w-lg">
@@ -89,8 +89,8 @@ export function EmptyState({ userName, onSelect }: EmptyStateProps) {
         variants={fadeRise}
         className="text-caption text-text-tertiary mt-14 max-w-sm leading-relaxed"
       >
-        Las respuestas se generan únicamente a partir de documentos oficiales indexados de la
-        Universidad del Valle de Guatemala, Campus Altiplano.
+        Cada respuesta sale de los reglamentos y documentos oficiales de la Universidad del Valle
+        de Guatemala, Campus Altiplano, y cita de cuál proviene.
       </motion.p>
     </motion.div>
   );

@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { Slot } from "radix-ui";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 interface IconButtonProps extends Omit<ComponentProps<"button">, "aria-label"> {
   /** Obligatorio: estos botones no tienen texto visible. */

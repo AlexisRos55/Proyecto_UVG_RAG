@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 /**
  * Identidad de UVG AI.

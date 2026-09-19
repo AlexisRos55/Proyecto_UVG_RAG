@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, RotateCw, WifiOff } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 import { fadeRise, transition } from "@/design-system/motion";
 import { ApiError } from "@/shared/lib/api-client";

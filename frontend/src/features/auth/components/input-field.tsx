@@ -1,6 +1,6 @@
 import { useId, type ComponentProps, type ReactNode } from "react";
 import { Check } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

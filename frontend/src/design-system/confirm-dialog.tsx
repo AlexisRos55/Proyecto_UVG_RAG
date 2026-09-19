@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { AlertDialog } from "radix-ui";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 interface ConfirmDialogProps {
   open: boolean;

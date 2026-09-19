@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ShieldCheck } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 interface InfoPanelProps {
   icon?: ReactNode;

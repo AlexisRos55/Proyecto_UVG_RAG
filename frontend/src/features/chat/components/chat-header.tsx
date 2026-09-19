@@ -1,4 +1,5 @@
 import { Menu } from "lucide-react";
+import { cn } from "@/design-system/cn";
 
 import { BrandLockup } from "@/design-system/brand";
 import { IconButton } from "@/design-system/icon-button";
@@ -31,21 +32,28 @@ export function ChatHeader({ title, isOnline, onOpenSidebar }: ChatHeaderProps) 
         </p>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
-        {/* El punto de estado usa el verde institucional, no un verde genérico de
-            paleta: es el detalle de color más repetido de la interfaz. */}
-        <span className="relative flex size-1.5 shrink-0" aria-hidden="true">
-          {isOnline && (
-            <span className="bg-primary/40 absolute inline-flex size-full animate-ping rounded-full" />
-          )}
-          <span
-            className={`relative inline-flex size-1.5 rounded-full ${isOnline ? "bg-primary" : "bg-destructive"}`}
-          />
+      {/* El estado se anuncia siempre, aunque la etiqueta visible se oculte en
+          pantallas estrechas: antes el punto era `aria-hidden` y el texto
+          `hidden sm:inline`, así que en móvil la caída del servidor no llegaba
+          ni a la vista ni al lector de pantalla. */}
+      <p className="ml-auto flex items-center gap-2" role="status">
+        <span className="sr-only">
+          {isOnline ? "Conectado con el servidor" : "Sin conexión con el servidor"}
         </span>
-        <span className="text-caption text-muted-foreground hidden sm:inline">
+        {/* Punto sólido, sin pulso permanente: una animación infinita mantiene una
+            capa de composición activa toda la sesión y, sobre todo, «en línea» no
+            es una novedad que haya que seguir anunciando. */}
+        <span
+          className={cn(
+            "size-1.5 shrink-0 rounded-full transition-colors duration-300",
+            isOnline ? "bg-primary" : "bg-destructive",
+          )}
+          aria-hidden="true"
+        />
+        <span className="text-caption text-muted-foreground hidden sm:inline" aria-hidden="true">
           {isOnline ? "En línea" : "Sin conexión"}
         </span>
-      </div>
+      </p>
     </header>
   );
 }

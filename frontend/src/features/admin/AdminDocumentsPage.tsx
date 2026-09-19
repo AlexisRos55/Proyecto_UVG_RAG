@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, FileUp, LoaderCircle, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 import { BrandLockup } from "@/design-system/brand";
 import { ConfirmDialog } from "@/design-system/confirm-dialog";

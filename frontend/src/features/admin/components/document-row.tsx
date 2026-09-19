@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Clock, FileText, RotateCw, Trash2 } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 import { IconButton } from "@/design-system/icon-button";
 import { transition } from "@/design-system/motion";

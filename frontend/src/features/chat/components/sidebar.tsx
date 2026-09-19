@@ -1,13 +1,16 @@
-import { cn } from "cn";
+import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { FolderCog, LogOut, MessageSquare, Plus, X } from "lucide-react";
+import { cn } from "@/design-system/cn";
 
 import { BrandLockup } from "@/design-system/brand";
 import { IconButton } from "@/design-system/icon-button";
 import { EASE_STANDARD, transition } from "@/design-system/motion";
 import { ThemeToggle } from "@/features/chat/components/theme-toggle";
+import { groupByDate } from "@/features/chat/lib/conversation-groups";
 import { formatRelativeDate } from "@/features/chat/lib/format";
+import { useFocusTrap } from "@/shared/hooks/use-focus-trap";
 
 export interface ConversationListItem {
   id: string;
@@ -32,8 +35,9 @@ interface SidebarProps {
 /**
  * La lista itera sobre un arreglo aunque hoy el backend sólo sostenga un hilo
  * activo por estudiante (FR-14): cuando exista historial múltiple, esta vista
- * no cambia. Lo que NO se dibuja es el menú contextual de renombrar/eliminar:
- * dibujarlo sin backend detrás sería prometer una función inexistente.
+ * no cambia. Lo que NO se dibuja es el menú contextual de renombrar/eliminar/
+ * fijar: no hay endpoints detrás y dibujarlo sería prometer una función
+ * inexistente.
  */
 function ConversationRow({
   conversation,
@@ -48,39 +52,51 @@ function ConversationRow({
     <button
       type="button"
       onClick={onSelect}
+      // `aria-current` es lo que informa al lector de pantalla de cuál es la
+      // conversación abierta: la barra verde sólo lo dice a quien la ve.
+      aria-current={isActive ? "true" : undefined}
       className={cn(
         "group relative flex w-full items-center gap-2.5 rounded-lg py-2 pr-2.5 pl-3 text-left",
-        "transition-colors duration-150 ease-soft",
+        "transition-colors duration-200 ease-soft",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
         isActive ? "bg-foreground/[0.055]" : "hover:bg-foreground/[0.035]",
       )}
     >
-      {/* Indicador activo: una barra verde de 2px. El único elemento del panel que
-          usa color de marca de forma sostenida, y mide 2×14 píxeles. */}
+      {/* Indicador activo: una barra verde de 2px que crece desde el centro. El
+          único elemento del panel que usa color de marca de forma sostenida. */}
       <span
         className={cn(
-          "bg-primary absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-full",
-          "transition-all duration-200 ease-standard",
-          isActive ? "opacity-100" : "opacity-0",
+          "bg-primary absolute top-1/2 left-0 w-0.5 -translate-y-1/2 rounded-full",
+          "transition-all duration-300 ease-standard",
+          isActive ? "h-4 opacity-100" : "h-0 opacity-0",
         )}
         aria-hidden="true"
       />
       <MessageSquare
         className={cn(
-          "size-3.5 shrink-0 transition-colors",
-          isActive ? "text-primary" : "text-text-tertiary",
+          "size-3.5 shrink-0 transition-colors duration-200",
+          isActive ? "text-primary" : "text-text-tertiary group-hover:text-muted-foreground",
         )}
         strokeWidth={1.75}
       />
       <span className="flex min-w-0 flex-1 flex-col">
         <span
           className={cn(
-            "text-ui truncate transition-colors",
-            isActive ? "text-foreground" : "text-muted-foreground",
+            "text-ui truncate transition-colors duration-200",
+            isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground",
           )}
         >
           {conversation.title}
         </span>
-        <span className="text-micro text-text-tertiary tracking-normal">
+        {/* Sobre la fila activa el token terciario cae a 4.32:1 —el velo del
+            estado activo oscurece el fondo— y AA exige 4.5. Ahí sube un nivel;
+            la jerarquía se sostiene igual porque el título pasa a `foreground`. */}
+        <span
+          className={cn(
+            "text-micro tracking-normal",
+            isActive ? "text-muted-foreground" : "text-text-tertiary",
+          )}
+        >
           {formatRelativeDate(conversation.updatedAt)}
         </span>
       </span>
@@ -98,6 +114,10 @@ function SidebarContent({
   onLogout,
   onCloseMobile,
 }: Omit<SidebarProps, "isOpen" | "onClose"> & { onCloseMobile: () => void }) {
+  // Los tramos («Hoy», «Esta semana»…) sustituyen al rótulo fijo «Reciente»:
+  // ahora el encabezado dice algo verdadero sobre lo que hay debajo.
+  const groups = useMemo(() => groupByDate(conversations), [conversations]);
+
   return (
     <div className="bg-sidebar relative flex h-full flex-col">
       {/* Firma institucional del panel: un velo verde de opacidad mínima que cae desde
@@ -135,36 +155,47 @@ function SidebarContent({
           )}
         >
           <Plus
-            className="text-primary size-4 transition-transform duration-200 ease-standard group-hover:rotate-90"
+            className="text-primary size-4 transition-transform duration-300 ease-standard group-hover:rotate-90"
             strokeWidth={2.25}
           />
           Nueva conversación
         </motion.button>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-y-auto px-3 pt-6">
-        <p className="text-micro text-text-tertiary px-2.5 pb-2 font-semibold uppercase">
-          Reciente
-        </p>
-
-        {conversations.length === 0 ? (
-          <p className="text-caption text-text-tertiary px-2.5">
-            Tus conversaciones aparecerán aquí.
-          </p>
+      <nav
+        className="relative min-h-0 flex-1 overflow-y-auto px-3 pt-6"
+        aria-label="Conversaciones"
+      >
+        {groups.length === 0 ? (
+          <>
+            <p className="text-micro text-text-tertiary px-2.5 pb-2 font-semibold uppercase">
+              Conversaciones
+            </p>
+            <p className="text-caption text-text-tertiary px-2.5">
+              Tus conversaciones aparecerán aquí.
+            </p>
+          </>
         ) : (
-          <ul className="flex flex-col gap-0.5">
-            {conversations.map((conversation) => (
-              <li key={conversation.id}>
-                <ConversationRow
-                  conversation={conversation}
-                  isActive={conversation.id === activeConversationId}
-                  onSelect={() => onSelectConversation(conversation.id)}
-                />
-              </li>
-            ))}
-          </ul>
+          groups.map((group, index) => (
+            <div key={group.bucket} className={index === 0 ? "" : "mt-5"}>
+              <h2 className="text-micro text-text-tertiary px-2.5 pb-2 font-semibold uppercase">
+                {group.label}
+              </h2>
+              <ul className="flex flex-col gap-0.5">
+                {group.items.map((conversation) => (
+                  <li key={conversation.id}>
+                    <ConversationRow
+                      conversation={conversation}
+                      isActive={conversation.id === activeConversationId}
+                      onSelect={() => onSelectConversation(conversation.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
         )}
-      </div>
+      </nav>
 
       {isAdmin && (
         <div className="relative px-3 pb-1">
@@ -173,7 +204,7 @@ function SidebarContent({
             onClick={onCloseMobile}
             className={cn(
               "text-ui text-muted-foreground hover:text-foreground flex w-full items-center gap-2.5 rounded-lg px-3 py-2",
-              "hover:bg-foreground/[0.035] transition-colors duration-150 ease-soft",
+              "hover:bg-foreground/[0.035] transition-colors duration-200 ease-soft",
               "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
             )}
           >
@@ -189,7 +220,9 @@ function SidebarContent({
           <span className="bg-primary/12 text-primary text-micro ring-primary/15 flex size-7 shrink-0 items-center justify-center rounded-full font-semibold tracking-normal ring-1">
             {userEmail.charAt(0).toUpperCase()}
           </span>
-          <span className="text-caption text-muted-foreground truncate">{userEmail}</span>
+          <span className="text-caption text-muted-foreground truncate" title={userEmail}>
+            {userEmail}
+          </span>
         </div>
         <ThemeToggle />
         <IconButton label="Cerrar sesión" size="sm" onClick={onLogout}>
@@ -201,11 +234,18 @@ function SidebarContent({
 }
 
 export function Sidebar({ isOpen, onClose, ...contentProps }: SidebarProps) {
+  // En móvil el panel es un modal de verdad: atrapa el foco, se cierra con
+  // Escape y lo devuelve al botón que lo abrió (ver useFocusTrap).
+  const panelRef = useFocusTrap<HTMLElement>(isOpen, onClose);
+
   return (
     <>
       {/* Escritorio: columna fija. Sin borde derecho -- el sidebar se separa del
           lienzo por un cambio mínimo de superficie, no por una línea. */}
-      <aside className="hidden h-dvh w-[var(--sidebar-width)] shrink-0 lg:block">
+      <aside
+        className="hidden h-dvh w-[var(--sidebar-width)] shrink-0 lg:block"
+        aria-label="Panel de conversaciones"
+      >
         <SidebarContent {...contentProps} onCloseMobile={onClose} />
       </aside>
 
@@ -222,7 +262,12 @@ export function Sidebar({ isOpen, onClose, ...contentProps }: SidebarProps) {
               aria-hidden="true"
             />
             <motion.aside
-              className="shadow-float fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] lg:hidden"
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Panel de conversaciones"
+              tabIndex={-1}
+              className="shadow-float fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] outline-none lg:hidden"
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}

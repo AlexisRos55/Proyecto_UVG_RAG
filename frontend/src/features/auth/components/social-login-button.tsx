@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { LoaderCircle } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 import { Button } from "@/components/ui/button";
 

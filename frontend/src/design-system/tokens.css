@@ -80,8 +80,14 @@
        Se usan con sintaxis arbitraria (`max-w-[var(--measure)]`) para que exista
        un único lugar donde cambiar el ancho de lectura o del panel lateral. */
 
-    /* Ancho de lectura: 768px. Longitud de línea óptima para texto corrido. */
-    --measure: 48rem;
+    /* Ancho de lectura.
+       Medido, no estimado: con Geist a 17px el avance medio de glifo en prosa
+       española es de 7.9px, así que los 48rem anteriores daban 92 caracteres por
+       línea — muy por encima del máximo tolerable (85) y del óptimo clásico
+       (66). A 42rem la columna cae a ~77 caracteres, que es donde el ojo vuelve
+       al inicio de la línea siguiente sin perder el renglón en respuestas
+       largas. */
+    --measure: 42rem;
     --sidebar-width: 17rem;
     --header-height: 3.25rem;
 

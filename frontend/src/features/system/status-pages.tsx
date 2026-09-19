@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Compass, ShieldOff } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 import { BrandLockup } from "@/design-system/brand";
 import { fadeRise, stagger } from "@/design-system/motion";
