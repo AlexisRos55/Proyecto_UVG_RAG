@@ -3,7 +3,12 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 TEST_DATABASE_URL = "postgresql+psycopg://rag_app:devpassword@localhost:5433/asistente_rag"
 

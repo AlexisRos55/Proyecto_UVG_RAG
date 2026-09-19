@@ -33,7 +33,7 @@ export function MobileBrandBar() {
         <h1 className="font-heading text-xl leading-tight font-semibold tracking-[-0.02em] text-white">
           Asistente Inteligente UVG
         </h1>
-        <p className="max-w-[42ch] text-[0.8125rem] leading-relaxed text-white/65">
+        <p className="max-w-[42ch] text-caption leading-relaxed text-white/65">
           Plataforma institucional basada en Inteligencia Artificial para estudiantes,
           docentes y personal administrativo.
         </p>

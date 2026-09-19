@@ -39,3 +39,7 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+
+# Protocolo de graduación: documento personal del autor. El repositorio es
+# público, así que se mantiene fuera del control de versiones a propósito.
+docs/source/Protocolo*.docx

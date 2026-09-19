@@ -1,18 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate, Link } from "react-router-dom";
-import { toast } from "sonner";
+import { Link, useNavigate } from "react-router-dom";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { AuthLayout } from "@/features/auth/components/auth-layout";
 import { CredentialsForm } from "@/features/auth/components/credentials-form";
+import { FormAlert } from "@/features/auth/components/form-alert";
+import { InfoPanel } from "@/features/auth/components/info-panel";
+import { LoginCard } from "@/features/auth/components/login-card";
 import { useAuth } from "@/features/auth/auth-context";
 import type { CredentialsFormValues } from "@/features/auth/schemas";
 import { ApiError } from "@/shared/lib/api-client";
+
+const GENERIC_REGISTER_ERROR = "No se pudo completar el registro. Inténtalo de nuevo.";
 
 export function RegisterPage() {
   const { register } = useAuth();
@@ -20,35 +18,47 @@ export function RegisterPage() {
 
   const mutation = useMutation({
     mutationFn: (values: CredentialsFormValues) => register(values.email, values.password),
-    onSuccess: () => navigate("/chat"),
-    onError: (error: unknown) => {
-      const message = error instanceof ApiError ? error.message : "No se pudo completar el registro.";
-      toast.error(message);
-    },
+    onSuccess: () => navigate("/chat", { replace: true }),
   });
 
+  // El error se muestra dentro de la tarjeta, junto al formulario que lo produjo,
+  // y no como aviso flotante en una esquina: "correo ya registrado" pertenece al
+  // campo, no al borde de la pantalla.
+  const errorMessage = mutation.isError
+    ? mutation.error instanceof ApiError
+      ? mutation.error.message
+      : GENERIC_REGISTER_ERROR
+    : null;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Crear cuenta</CardTitle>
-          <CardDescription>Regístrate con tu correo institucional @uvg.edu.gt.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <CredentialsForm
-            submitLabel="Registrarme"
-            pendingLabel="Creando cuenta..."
-            isPending={mutation.isPending}
-            onSubmit={(values) => mutation.mutate(values)}
-          />
-          <p className="text-center text-sm text-muted-foreground">
-            ¿Ya tienes cuenta?{" "}
-            <Link to="/login" className="font-medium text-foreground underline">
-              Inicia sesión
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout>
+      <LoginCard
+        title="Crear cuenta"
+        subtitle="Regístrate con tu correo institucional para comenzar."
+      >
+        <FormAlert message={errorMessage} />
+
+        <CredentialsForm
+          submitLabel="Crear cuenta"
+          pendingLabel="Creando cuenta…"
+          isPending={mutation.isPending}
+          onSubmit={(values) => mutation.mutate(values)}
+        />
+
+        <InfoPanel>
+          Solo se admiten correos del dominio institucional @uvg.edu.gt.
+        </InfoPanel>
+
+        <p className="text-caption text-muted-foreground text-center">
+          ¿Ya tienes cuenta?{" "}
+          <Link
+            to="/login"
+            className="text-primary hover:text-uvg-accent-strong focus-visible:ring-ring rounded font-medium underline-offset-4 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Inicia sesión
+          </Link>
+        </p>
+      </LoginCard>
+    </AuthLayout>
   );
 }

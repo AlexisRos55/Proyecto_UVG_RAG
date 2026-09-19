@@ -17,6 +17,45 @@ export function generateConversationTitle(firstQuestion: string): string {
   return `${(lastSpace > 20 ? truncated.slice(0, lastSpace) : truncated).trimEnd()}…`;
 }
 
+/**
+ * Elige qué mensaje del estudiante titula la conversación.
+ *
+ * Saludar primero es lo más natural, y hasta ahora eso dejaba conversaciones
+ * llamadas «Hola» para siempre. La señal para distinguir un turno social de una
+ * consulta real ya viaja en los datos: una habilidad local devuelve
+ * `is_grounded === null`, porque su respuesta no es una afirmación sobre la
+ * normativa.
+ *
+ * Pero descartar sólo los turnos sociales no basta. Una pregunta que el
+ * asistente **no pudo** responder también deja rastro —llega con
+ * `is_grounded === false`— y titulaba la conversación igual que cualquier otra:
+ * un texto sin sentido al que el sistema respondió «no encontré normativa»
+ * acababa dando nombre a todo el hilo. Así que se busca en dos pasadas:
+ * primero una consulta que sí obtuvo respuesta fundamentada, y sólo si no hay
+ * ninguna se acepta una que al menos llegó a los documentos.
+ *
+ * Si tampoco hay eso —la conversación son puros saludos— no se inventa un
+ * título: se devuelve `null` y la vista muestra su propio texto.
+ */
+export function pickTitleSource<
+  T extends { role: string; content: string; is_grounded: boolean | null },
+>(messages: readonly T[]): string | null {
+  const firstWhere = (accepts: (grounded: boolean) => boolean): string | null => {
+    for (let index = 0; index < messages.length; index += 1) {
+      const message = messages[index];
+      if (message.role !== "student") continue;
+
+      const reply = messages[index + 1];
+      if (reply?.role === "assistant" && reply.is_grounded !== null && accepts(reply.is_grounded)) {
+        return message.content;
+      }
+    }
+    return null;
+  };
+
+  return firstWhere((grounded) => grounded) ?? firstWhere(() => true);
+}
+
 /** Nombre para el saludo, derivado del correo institucional
  * ("alexis.rosales@uvg.edu.gt" -> "Alexis"). Sin endpoint de perfil en el
  * backend, el correo es el único dato de identidad disponible. */

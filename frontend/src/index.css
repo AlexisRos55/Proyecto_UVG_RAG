@@ -29,6 +29,8 @@
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
+    --color-text-tertiary: var(--text-tertiary);
+    --color-destructive-foreground: var(--destructive-foreground);
     --color-muted: var(--muted);
     --color-secondary-foreground: var(--secondary-foreground);
     --color-secondary: var(--secondary);
@@ -80,21 +82,28 @@
     --card-foreground: oklch(0.16 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.16 0 0);
-    /* Acento de identidad: VERDE INSTITUCIONAL #008C36, el tono del logotipo segun el
-       Manual de Normas Graficas (marzo 2025, pag. 10). Se usa solo como acento --
-       indicadores, estado activo, foco, enlaces, iconos -- nunca como superficie. */
-    --primary: oklch(0.558 0.162 148);
+    /* Acento de identidad: familia del VERDE INSTITUCIONAL UVG (Manual de Normas
+       Graficas, marzo 2025, pag. 10). Se usa el tono fuerte #00702B y no el #008C36
+       exacto del logotipo porque sobre blanco este ultimo alcanza 4.37:1 y WCAG AA
+       exige 4.5:1 para texto. #00702B pertenece a la misma familia y llega a 6.26:1.
+       El #008C36 literal se conserva en --uvg-green-institutional para el logotipo. */
+    --primary: oklch(0.487 0.144 149);
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.2 0 0);
     --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.5 0 0);
+    /* Jerarquia de texto por color solido, nunca por opacidad: atenuar un mismo color
+       con /55 o /65 hundia el contraste por debajo del minimo legal. Cada nivel esta
+       verificado sobre lienzo y sobre el panel lateral. */
+    --muted-foreground: oklch(0.48 0 0); /* secundario  6.54:1 */
+    --text-tertiary: oklch(0.54 0 0); /* terciario   5.06:1 sobre lienzo, 4.85:1 sobre panel */
     --accent: oklch(0.955 0.014 148);
-    --accent-foreground: oklch(0.558 0.162 148);
-    --destructive: oklch(0.577 0.245 27.325);
+    --accent-foreground: oklch(0.487 0.144 149);
+    --destructive: oklch(0.52 0.21 27);
+    --destructive-foreground: oklch(0.985 0 0);
     --border: oklch(0.93 0 0);
-    --input: oklch(0.93 0 0);
-    --ring: oklch(0.558 0.162 148 / 45%);
+    --input: oklch(0.88 0 0);
+    --ring: oklch(0.487 0.144 149);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -126,21 +135,26 @@
     --uvg-navy: #0c3d5b;
     --uvg-navy-deep: #06263a;
     --uvg-navy-soft: #14536f;
-    --uvg-accent: #008c36;
-    --uvg-accent-strong: #00702b;
+    /* Acento de accion del portal de acceso. Se usa el verde fuerte y no el #008C36
+       literal para que el texto blanco del boton principal alcance AA (6.26:1). */
+    --uvg-accent: #00702b;
+    --uvg-accent-strong: #005f26;
     --uvg-accent-soft: #edf8f1;
+    /* Lienzo del portal de acceso. Se redefine en modo oscuro: antes estaba fijo
+       en un gris claro y salir de sesión desde el chat oscuro provocaba un
+       pantallazo blanco a plena luminosidad. */
     --uvg-canvas: #f6f8fc;
     /* Sidebar: superficie neutra apenas distinta del lienzo principal -- ya no un bloque
        de color de marca (rediseño premium: el navy queda solo para el portal de acceso).
        El acento azul solo aparece en el estado activo/foco, nunca como fondo del panel. */
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.2 0 0);
-    --sidebar-primary: oklch(0.558 0.162 148);
+    --sidebar-primary: oklch(0.487 0.144 149);
     --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.94 0 0);
     --sidebar-accent-foreground: oklch(0.16 0 0);
     --sidebar-border: oklch(0.9 0 0);
-    --sidebar-ring: oklch(0.558 0.162 148 / 45%);
+    --sidebar-ring: oklch(0.487 0.144 149);
 }
 
 .dark {
@@ -161,13 +175,15 @@
     --secondary: #1d1f23;
     --secondary-foreground: oklch(0.94 0 0);
     --muted: #1d1f23;
-    --muted-foreground: oklch(0.63 0 0);
+    --muted-foreground: oklch(0.7 0 0); /* secundario  7.36:1 */
+    --text-tertiary: oklch(0.63 0 0); /* terciario   5.62:1 */
     --accent: #1d1f23;
     --accent-foreground: oklch(0.852 0.179 165);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 9%);
-    --input: oklch(1 0 0 / 12%);
-    --ring: oklch(0.852 0.179 165 / 45%);
+    --destructive: oklch(0.72 0.17 25);
+    --destructive-foreground: oklch(0.16 0 0);
+    --border: oklch(1 0 0 / 14%);
+    --input: oklch(1 0 0 / 20%);
+    --ring: oklch(0.852 0.179 165);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -176,6 +192,8 @@
     --surface-raised: oklch(1 0 0 / 7%);
     --surface-raised-hover: oklch(1 0 0 / 11%);
     --hairline: oklch(1 0 0 / 8%);
+    --uvg-canvas: #0b0b0c;
+    --uvg-accent-soft: color-mix(in oklab, var(--uvg-green-masters) 12%, #111214);
     --sidebar: #111214;
     --sidebar-foreground: oklch(0.94 0 0);
     --sidebar-primary: oklch(0.852 0.179 165);
@@ -183,7 +201,7 @@
     --sidebar-accent: #1d1f23;
     --sidebar-accent-foreground: oklch(0.94 0 0);
     --sidebar-border: oklch(1 0 0 / 9%);
-    --sidebar-ring: oklch(0.852 0.179 165 / 45%);
+    --sidebar-ring: oklch(0.852 0.179 165);
 }
 
 @layer base {

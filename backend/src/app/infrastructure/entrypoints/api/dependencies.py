@@ -35,6 +35,9 @@ from app.infrastructure.adapters.document_processing.chunking_service import (
 from app.infrastructure.adapters.document_processing.document_indexing_pipeline import (
     DocumentIndexingPipeline,
 )
+from app.infrastructure.adapters.nlp.rule_based_intent_classifier import (
+    RuleBasedIntentClassifier,
+)
 from app.infrastructure.adapters.persistence.database import get_db_session
 from app.infrastructure.adapters.persistence.postgres_conversation_repository import (
     PostgresConversationRepository,
@@ -146,6 +149,8 @@ def get_answer_query_use_case(
         document_repository=document_repository,
         top_k=rag_settings.top_k,
         min_similarity_threshold=rag_settings.min_similarity_threshold,
+        # Sin estado ni configuración: se instancia por petición sin coste apreciable.
+        intent_classifier=RuleBasedIntentClassifier(),
     )
 
 

@@ -35,11 +35,11 @@ class FakeVectorStorePort(VectorStorePort):
     def search(self, query_embedding: EmbeddingVector, top_k: int) -> list[RetrievedChunk]:
         return self._seeded_results[:top_k]
 
-    def delete_by_document_id(self, document_id) -> None:  # noqa: ANN001
+    def delete_by_document_id(self, document_id) -> None:
         self.upserted_chunks = [c for c in self.upserted_chunks if c.document_id != document_id]
 
 
-def make_retrieved_chunk(text: str, score: float, document_id=None) -> RetrievedChunk:  # noqa: ANN001
+def make_retrieved_chunk(text: str, score: float, document_id=None) -> RetrievedChunk:
     chunk = Chunk(id=new_id(), document_id=document_id or new_id(), text=text, position=0)
     return RetrievedChunk(chunk=chunk, score=SimilarityScore(score))
 
@@ -56,7 +56,11 @@ class FakeVerificationStrategyPort(VerificationStrategyPort):
             confidence=VerificationConfidence.HIGH,
         )
         self.received_questions: list[str] = []
+        self.received_style_directives: list[str | None] = []
 
-    async def answer(self, question: str, context_chunks) -> VerifiedAnswer:  # noqa: ANN001
+    async def answer(
+        self, question: str, context_chunks, style_directive: str | None = None
+    ) -> VerifiedAnswer:
         self.received_questions.append(question)
+        self.received_style_directives.append(style_directive)
         return self.configured_answer

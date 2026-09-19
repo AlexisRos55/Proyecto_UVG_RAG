@@ -31,7 +31,7 @@ export function AmbientDecor() {
         animate={drift([0, 34, 0], [0, 26, 0], 24)}
       />
       <motion.div
-        className="absolute -right-24 bottom-[18%] size-[22rem] rounded-full bg-sky-400/20 blur-[110px]"
+        className="absolute -right-24 bottom-[18%] size-[22rem] rounded-full bg-uvg-green-masters/20 blur-[110px]"
         animate={drift([0, -28, 0], [0, -22, 0], 28)}
       />
 

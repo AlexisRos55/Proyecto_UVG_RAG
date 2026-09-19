@@ -24,7 +24,7 @@ export function FieldError({ id, message }: FieldErrorProps) {
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="flex items-start gap-1.5 overflow-hidden text-[0.8125rem] leading-5 font-medium text-destructive"
+          className="flex items-start gap-1.5 overflow-hidden text-caption leading-5 font-medium text-destructive"
         >
           <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
           <span>{message}</span>

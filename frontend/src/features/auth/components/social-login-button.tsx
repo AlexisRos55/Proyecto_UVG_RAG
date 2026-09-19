@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { LoaderCircle } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/design-system/cn";
 
 import { Button } from "@/components/ui/button";
 
@@ -39,8 +39,8 @@ export function SocialLoginButton({
       disabled={isPending}
       aria-describedby={describedBy}
       className={cn(
-        "h-11 w-full gap-2.5 rounded-xl border-slate-200 bg-white text-[0.9375rem] font-medium text-slate-700 shadow-[0_1px_2px_rgb(15_23_42/0.04)] transition-all duration-200",
-        "hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900",
+        "h-11 w-full gap-2.5 rounded-xl border-border bg-card text-[0.9375rem] font-medium text-foreground shadow-[0_1px_2px_rgb(15_23_42/0.04)] transition-all duration-200",
+        "hover:border-input hover:bg-muted hover:text-foreground",
         "focus-visible:border-uvg-accent focus-visible:ring-3 focus-visible:ring-uvg-accent/20",
         className,
       )}
