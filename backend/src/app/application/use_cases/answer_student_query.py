@@ -31,16 +31,17 @@ from app.shared.kernel.ids import new_id
 # también: ante la primera conviene reformular; ante la segunda, el dato
 # probablemente no está en el corpus. Antes ambas compartían un único texto.
 NO_RETRIEVAL_MESSAGE = (
-    "No encontré nada sobre eso en los documentos oficiales que tengo indexados. "
-    "Puede que el tema no esté en la documentación disponible, o que ayude "
-    "preguntarlo con otras palabras."
+    "No encontré normativa oficial que hable de eso.\n\n"
+    "Puede que el tema no esté cubierto por los reglamentos que manejo, o que con otras "
+    "palabras sí lo encuentre. Intenta ser más específico: por ejemplo, en lugar de "
+    "«becas», «requisitos de la beca de excelencia académica»."
 )
 
 NOT_GROUNDED_MESSAGE = (
-    "Encontré documentos relacionados, pero ninguno responde tu pregunta con la "
-    "claridad suficiente como para confirmártelo. Prefiero no darte un dato que no "
-    "puedo respaldar; para estar seguro, conviene consultarlo con la oficina "
-    "correspondiente de UVG Altiplano."
+    "Hay normativa relacionada con tu consulta, pero no dice lo suficiente como para que "
+    "te lo confirme.\n\n"
+    "Prefiero no darte un dato que pueda estar equivocado. Para algo así conviene "
+    "confirmarlo directamente con la oficina que lleva el tema en el campus."
 )
 
 # Se conserva el nombre anterior: `scripts/evaluate.py` y las pruebas existentes
@@ -48,22 +49,26 @@ NOT_GROUNDED_MESSAGE = (
 NO_INFORMATION_MESSAGE = NO_RETRIEVAL_MESSAGE
 
 _STRUGGLING_HINT = (
-    "\n\nSi no das con lo que buscas, prueba a ser más específico: por ejemplo, "
-    "en lugar de «becas», «¿qué requisitos tiene la beca de excelencia académica?»."
+    "\n\nSi seguimos sin dar con ello, puede que convenga preguntarlo directamente en el "
+    "campus: a veces el detalle que buscas vive en un procedimiento interno y no en el "
+    "reglamento."
 )
 
-# Matices por nivel de confianza autoinformada. La señal ya se calculaba en cada
-# consulta y se descartaba: no se inventa una métrica nueva, se empieza a usar la
-# que ya se paga. Es autoinformada por el modelo, no una probabilidad calibrada.
+# Matiz por nivel de confianza autoinformada. La señal ya se calculaba en cada consulta
+# y se descartaba: no se inventa una métrica nueva, se empieza a usar la que ya se paga.
+# Es autoinformada por el modelo, no una probabilidad calibrada — de ahí que el texto
+# hable de "la normativa" y no de un porcentaje de certeza.
+#
+# La confianza alta no lleva matiz: añadir una coletilla a cada respuesta correcta la
+# convertiría en ruido y le quitaría fuerza justo cuando sí importa.
 _CONFIDENCE_CAVEATS = {
     VerificationConfidence.MEDIUM: (
-        "\n\n_Los documentos cubren tu pregunta, pero con matices: conviene confirmar "
-        "los detalles con la oficina correspondiente._"
+        "\n\nLa normativa cubre tu consulta, aunque con matices. Si vas a tomar una "
+        "decisión con esto, confirma los detalles en el campus."
     ),
     VerificationConfidence.LOW: (
-        "\n\n_La documentación disponible es parcial o ambigua en este punto. Te "
-        "recomiendo verificarlo directamente con la oficina correspondiente antes "
-        "de tomar cualquier decisión._"
+        "\n\nEn este punto la normativa es parcial y prefiero que lo verifiques antes de "
+        "actuar: consulta directamente con la oficina que lleva el tema."
     ),
 }
 

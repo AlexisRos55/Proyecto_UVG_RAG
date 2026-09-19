@@ -15,6 +15,20 @@ from app.application.use_cases.answer_student_query import (
     AnswerStudentQueryUseCase,
 )
 from app.domain.entities.document import Document, DocumentStatus
+from app.domain.services.local_skill_catalog import (
+    _acknowledge,
+    _declare_capabilities,
+    _declare_identity,
+    _decline_out_of_domain,
+    _decline_personal_data,
+    _explain_how_it_works,
+    _explain_privacy,
+    _explain_usage,
+    _introduce,
+    _join,
+)
+from app.domain.value_objects.conversation_context import ConversationContext
+from app.domain.value_objects.conversation_intent import ConversationIntent
 from app.domain.value_objects.verified_answer import VerificationConfidence, VerifiedAnswer
 from app.infrastructure.adapters.nlp.rule_based_intent_classifier import (
     RuleBasedIntentClassifier,
@@ -169,7 +183,11 @@ class TestSessionMemory:
         second = await use_case.execute(AnswerQueryRequest(user_id=user_id, question="Hola"))
 
         assert len(first.answer_text) > len(second.answer_text)
-        assert "de nuevo" in second.answer_text.lower()
+        # El invariante es que no vuelve a presentarse, no una frase concreta: el
+        # saludo de vuelta tiene varias redacciones y fijar una acoplaría el test
+        # a la redacción en lugar de a la conducta.
+        assert "Soy el Asistente" not in second.answer_text
+        assert "reglamentos oficiales" not in second.answer_text
 
     async def test_follow_up_reuses_the_previous_question(
         self, use_case: AnswerStudentQueryUseCase, verification: FakeVerificationStrategyPort
@@ -205,7 +223,9 @@ class TestConfidenceReachesTheStudent:
             answer_text="La beca cubre el 50%.", is_grounded=True, confidence=confidence
         )
         response = await ask(use_case, "¿Cuánto cubre la beca de excelencia?")
-        has_caveat = "_" in response.answer_text
+        # Se compara contra el texto base: la respuesta sin matiz es exactamente la
+        # del modelo, y con matiz la excede.
+        has_caveat = response.answer_text.strip() != "La beca cubre el 50%."
         assert has_caveat is should_caveat
 
 
@@ -229,3 +249,42 @@ class TestBackwardCompatibility:
         )
         await ask(use_case, "Hola")
         assert len(verification.received_questions) == 1
+
+
+class TestVoice:
+    """La voz del asistente es parte del producto: si suena a plantilla o a
+    sistema interno, el estudiante deja de leerla. Estas pruebas fijan las tres
+    reglas que la auditoría conversacional señaló como rotas."""
+
+    def test_enumeration_does_not_chain_two_conjunctions(self) -> None:
+        """«…inscripción y admisión y requisitos académicos» no deja ver dónde
+        termina un elemento; con coma antes de «y» sí."""
+        ambiguous = ("becas y ayudas", "seguro estudiantil", "requisitos académicos")
+        assert _join(ambiguous) == "becas y ayudas, seguro estudiantil, y requisitos académicos"
+        assert _join(("plazos", "montos", "requisitos")) == "plazos, montos y requisitos"
+
+    def test_repeated_thanks_do_not_return_the_same_sentence(self) -> None:
+        answers = {
+            _acknowledge(ConversationContext(turn_count=turn), ConversationIntent.THANKS)
+            for turn in range(4)
+        }
+        assert len(answers) == 4
+
+    def test_local_answers_never_use_system_vocabulary(self) -> None:
+        """El estudiante no sabe —ni tiene por qué— qué es un fragmento o un
+        índice: es vocabulario de la implementación filtrándose a la interfaz."""
+        jargon = ("fragmento", "indexad", "chunk", "embedding", "contexto recuperado", "corpus")
+        context = ConversationContext()
+        texts = [
+            _introduce(context),
+            _declare_identity(),
+            _declare_capabilities(),
+            _explain_how_it_works(),
+            _explain_usage(context),
+            _explain_privacy(),
+            _decline_out_of_domain(),
+            _decline_personal_data(),
+        ]
+        for text in texts:
+            for term in jargon:
+                assert term not in text.lower(), f"«{term}» aparece en: {text[:60]}…"
