@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,7 +13,9 @@ class AnthropicSettings(BaseSettings):
 
     api_key: str
     model: str = "claude-haiku-4-5-20251001"
-    max_tokens: int = 1024
+    # Tope, no consumo: solo se facturan los tokens generados. 1024 truncaba respuestas
+    # en forma de panorama o tabla por programa (Fase 9); 2048 deja margen.
+    max_tokens: int = 2048
 
 
 class DatabaseSettings(BaseSettings):
@@ -65,6 +68,19 @@ class RagSettings(BaseSettings):
     chunk_overlap: int = 100
     embedding_model_name: str = "all-MiniLM-L6-v2"
     chroma_collection_name: str = "institutional_documents"
+
+    # --- Fase 9 (ADR-0012, ADR-0013). La línea base congelada se reproduce con
+    # RAG_CHUNKING_STRATEGY=fixed, RAG_RETRIEVAL_MODE=dense y RAG_CONTEXT_CHAR_BUDGET=0.
+    chunking_strategy: Literal["fixed", "structural"] = "structural"
+    structural_chunk_size: int = 600
+    retrieval_mode: Literal["dense", "hybrid"] = "hybrid"
+    candidate_pool: int = 30
+    min_lexical_coverage: float = 0.5
+    rrf_k: int = 60
+    evidence_similarity_threshold: float = 0.55
+    context_min_lexical_coverage: float = 0.25
+    context_char_budget: int = 6000
+    section_expansion_limit: int = 1400
 
 
 class AppSettings(BaseSettings):

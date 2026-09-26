@@ -15,6 +15,10 @@ export type VerificationConfidence = "high" | "medium" | "low";
 export interface SourceReference {
   document_name: string;
   page_number: number | null;
+  // Aditivos desde ADR-0014: ausentes en mensajes anteriores a la Fase 9.
+  document_title?: string | null;
+  section?: string | null;
+  page_end?: number | null;
 }
 
 export interface AnswerResponse {

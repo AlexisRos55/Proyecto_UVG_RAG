@@ -17,11 +17,17 @@ from app.infrastructure.adapters.llm.single_call_verification_adapter import (
     SingleCallVerificationAdapter,
 )
 from app.infrastructure.adapters.persistence.database import get_engine, get_session_factory
+from app.infrastructure.adapters.search.in_memory_corpus_index import InMemoryCorpusIndex
+from app.infrastructure.adapters.search.synchronized_vector_store import SynchronizedVectorStore
 from app.infrastructure.adapters.vector_store.chroma_vector_store import ChromaVectorStoreAdapter
 from app.infrastructure.adapters.vector_store.sentence_transformers_embedding import (
     SentenceTransformersEmbeddingAdapter,
 )
-from app.infrastructure.bootstrap import seed_default_admin, seed_documents_from_directory
+from app.infrastructure.bootstrap import (
+    ensure_index_matches_configuration,
+    seed_default_admin,
+    seed_documents_from_directory,
+)
 from app.infrastructure.config.settings import (
     get_anthropic_settings,
     get_app_settings,
@@ -54,10 +60,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.embedding_port = SentenceTransformersEmbeddingAdapter(
         model_name=rag_settings.embedding_model_name
     )
-    app.state.vector_store_port = ChromaVectorStoreAdapter(
+    chroma = ChromaVectorStoreAdapter(
         persist_directory=chroma_settings.chroma_persist_dir,
         collection_name=rag_settings.chroma_collection_name,
     )
+    # El índice léxico y el catálogo documental se reconstruyen desde ChromaDB,
+    # que sigue siendo el único almacén persistente de fragmentos (ADR-0012).
+    corpus_index = InMemoryCorpusIndex(loader=chroma.iter_chunks, size_probe=chroma.count)
+    app.state.corpus_index = corpus_index
+    app.state.vector_store_port = SynchronizedVectorStore(chroma, corpus_index)
     app.state.text_extractor_port = PyMuPDFExtractorAdapter()
     llm_port = AnthropicLLMAdapter(anthropic_settings)
     app.state.verification_port = SingleCallVerificationAdapter(llm_port)
@@ -68,13 +79,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with session_factory() as session:
         await seed_default_admin(session, app.state.auth_port, auth_settings)
     async with session_factory() as session:
+        await ensure_index_matches_configuration(
+            session,
+            chroma,
+            app.state.text_extractor_port,
+            app.state.embedding_port,
+            app.state.vector_store_port,
+            rag_settings,
+        )
+    async with session_factory() as session:
         await seed_documents_from_directory(
             session,
             app.state.text_extractor_port,
             app.state.embedding_port,
             app.state.vector_store_port,
             app_settings,
+            rag_settings,
         )
+    corpus_index.reload()
 
     logger.info("Asistente Virtual RAG UVG Altiplano - backend listo (modelo={})", anthropic_settings.model)
     yield

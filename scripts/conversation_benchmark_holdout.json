@@ -1,0 +1,306 @@
+{
+  "description": "Conjunto RESERVADO de conversaciones, redactado después de ajustar la capa conversacional y evaluado una sola vez sin modificar el código. Sirve para estimar la generalización sin el sesgo del conjunto usado durante el desarrollo (conversation_benchmark.json).",
+  "conversations": [
+    {
+      "id": "ho-credito",
+      "turns": [
+        {
+          "message": "Quiero información sobre el crédito educativo",
+          "facts": [
+            [
+              "crédito educativo"
+            ]
+          ]
+        },
+        {
+          "message": "¿Qué interés tiene?",
+          "facts": [
+            [
+              "interés variable del 10% anual"
+            ]
+          ],
+          "query_terms": [
+            "credito"
+          ]
+        },
+        {
+          "message": "¿Y en cuántas cuotas lo pago?",
+          "facts": [
+            [
+              "48 cuotas",
+              "48 mensualidades"
+            ]
+          ],
+          "query_terms": [
+            "credito"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ho-horas-beca",
+      "turns": [
+        {
+          "message": "¿Qué son las horas beca?",
+          "facts": [
+            [
+              "horas de servicio"
+            ]
+          ]
+        },
+        {
+          "message": "¿Quién asigna esas horas?",
+          "facts": [
+            [
+              "directores de departamento",
+              "departamento de ayudas financieras"
+            ]
+          ],
+          "query_terms": [
+            "horas"
+          ]
+        },
+        {
+          "message": "¿Y si no las cumplo?",
+          "facts": [
+            [
+              "más de un 25%"
+            ]
+          ],
+          "query_terms": [
+            "horas"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ho-clubes",
+      "turns": [
+        {
+          "message": "Me interesa crear un club",
+          "facts": [
+            [
+              "período de prueba de cinco meses",
+              "propuesta de inclusión"
+            ]
+          ]
+        },
+        {
+          "message": "¿Cuántas personas debe tener la directiva?",
+          "facts": [
+            [
+              "mínimo de cinco estudiantes"
+            ]
+          ],
+          "query_terms": [
+            "club"
+          ]
+        },
+        {
+          "message": "¿Cada cuánto tengo que renovarlo?",
+          "facts": [
+            [
+              "renovación de la inscripción",
+              "renovar su inscripción"
+            ]
+          ],
+          "query_terms": [
+            "club"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ho-trasciende",
+      "turns": [
+        {
+          "message": "Cuéntame de las Becas Trasciende",
+          "facts": [
+            [
+              "becas trasciende"
+            ]
+          ]
+        },
+        {
+          "message": "¿Qué porcentaje dan?",
+          "facts": [
+            [
+              "entre 5% y 25%"
+            ]
+          ],
+          "query_terms": [
+            "trasciende"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ho-pausa",
+      "turns": [
+        {
+          "message": "¿Cómo se eligen los representantes estudiantiles?",
+          "facts": [
+            [
+              "sistema electoral",
+              "consejo electoral",
+              "elección"
+            ]
+          ]
+        },
+        {
+          "message": "Ok gracias"
+        },
+        {
+          "message": "Sigamos",
+          "answer_contains": [
+            "elecciones"
+          ]
+        },
+        {
+          "message": "¿Qué pasa si una planilla hace campaña fuera de tiempo?",
+          "facts": [
+            [
+              "campaña electoral",
+              "sanciones",
+              "propaganda"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ho-fuera",
+      "turns": [
+        {
+          "message": "¿Tienen residencias para estudiantes?",
+          "facts": [
+            [
+              "residencias universitarias"
+            ]
+          ]
+        },
+        {
+          "message": "¿Cuánto cuesta el parqueo?",
+          "abstain": true
+        }
+      ]
+    },
+    {
+      "id": "h10-pronombre-credito",
+      "description": "Fase 10 (reservado): pronombre átono de tercera persona sobre el tema activo.",
+      "turns": [
+        {
+          "message": "Háblame del crédito educativo"
+        },
+        {
+          "message": "¿Y cómo se paga?",
+          "query_terms": [
+            "educativ"
+          ]
+        },
+        {
+          "message": "¿En cuántas cuotas lo puedo cancelar?",
+          "query_terms": [
+            "educativ"
+          ],
+          "facts": [
+            [
+              "48 cuotas mensuales"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "h10-instancia-de-antes",
+      "description": "Fase 10 (reservado): «ese consejo de antes» tras cambiar de tema.",
+      "turns": [
+        {
+          "message": "¿Qué hace el Consejo Electoral?",
+          "facts": [
+            [
+              "artículo 45: funciones",
+              "funciones del consejo electoral"
+            ]
+          ]
+        },
+        {
+          "message": "Gracias",
+          "no_llm": true
+        },
+        {
+          "message": "Háblame de los clubes"
+        },
+        {
+          "message": "¿Y ese consejo de antes quién lo integra?",
+          "query_terms": [
+            "electoral"
+          ],
+          "forbidden_query_terms": [
+            "club"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "h10-comparacion-memoria",
+      "description": "Fase 10 (reservado): la comparación anterior sigue en juego.",
+      "turns": [
+        {
+          "message": "Compara la Beca Despega con la Beca Transforma"
+        },
+        {
+          "message": "¿Cuál pide más requisitos?",
+          "query_terms": [
+            "despega",
+            "transforma"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "h10-perdido",
+      "description": "Fase 10 (reservado): estudiante desorientado sin tema activo.",
+      "turns": [
+        {
+          "message": "no le entiendo a nada de esto",
+          "no_llm": true,
+          "answer_contains": [
+            "becas"
+          ]
+        },
+        {
+          "message": "por dónde empiezo?",
+          "no_llm": true,
+          "answer_contains": [
+            "becas"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "h10-regreso-tema",
+      "description": "Fase 10 (reservado): regreso explícito a un tema anterior.",
+      "turns": [
+        {
+          "message": "Háblame de las becas"
+        },
+        {
+          "message": "¿Cuándo inician las clases del primer ciclo 2027?"
+        },
+        {
+          "message": "Regresando a las becas, ¿qué pasa si repruebo un curso?",
+          "query_terms": [
+            "beca"
+          ],
+          "facts": [
+            [
+              "reprobación o retiro de cursos",
+              "cursos reprobados o retirados"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

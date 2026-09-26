@@ -8,11 +8,9 @@ from loguru import logger
 
 from app.application.dto.document_dto import IngestDocumentResult
 from app.domain.entities.document import DocumentStatus
+from app.domain.ports.document_indexer_port import DocumentIndexerPort
 from app.domain.ports.document_repository_port import DocumentRepositoryPort
 from app.domain.ports.vector_store_port import VectorStorePort
-from app.infrastructure.adapters.document_processing.document_indexing_pipeline import (
-    DocumentIndexingPipeline,
-)
 from app.shared.exceptions.domain_errors import DocumentProcessingError, DomainError, NotFoundError
 from app.shared.kernel.clock import utc_now
 
@@ -28,7 +26,7 @@ class TriggerReindexUseCase:
         self,
         document_repository: DocumentRepositoryPort,
         vector_store_port: VectorStorePort,
-        indexing_pipeline: DocumentIndexingPipeline,
+        indexing_pipeline: DocumentIndexerPort,
     ) -> None:
         self._document_repository = document_repository
         self._vector_store_port = vector_store_port
@@ -47,7 +45,9 @@ class TriggerReindexUseCase:
 
         try:
             await asyncio.to_thread(self._vector_store_port.delete_by_document_id, document_id)
-            chunks = await self._indexing_pipeline.process(document_id, Path(document.storage_path))
+            chunks = await self._indexing_pipeline.process(
+                document_id, Path(document.storage_path), display_name=document.filename
+            )
 
             document.mark_indexed(utc_now())
             await self._document_repository.update_status(document_id, DocumentStatus.INDEXED)

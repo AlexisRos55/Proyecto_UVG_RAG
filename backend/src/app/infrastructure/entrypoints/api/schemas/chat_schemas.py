@@ -17,12 +17,24 @@ class AskQuestionRequestSchema(BaseModel):
 
 
 class SourceReferenceSchema(BaseModel):
+    """Cita documental. Los campos posteriores a `page_number` son aditivos (ADR-0014):
+    un cliente que solo conoce los dos primeros sigue funcionando sin cambios."""
+
     document_name: str
     page_number: int | None = None
+    document_title: str | None = None
+    section: str | None = None
+    page_end: int | None = None
 
     @classmethod
     def from_value_object(cls, source: SourceReference) -> SourceReferenceSchema:
-        return cls(document_name=source.document_name, page_number=source.page_number)
+        return cls(
+            document_name=source.document_name,
+            page_number=source.page_number,
+            document_title=source.document_title,
+            section=source.section,
+            page_end=source.page_end,
+        )
 
 
 class AnswerResponseSchema(BaseModel):
@@ -65,7 +77,11 @@ class MessageSchema(BaseModel):
             created_at=message.created_at,
             is_grounded=message.is_grounded,
             confidence=message.confidence,
-            sources=[SourceReferenceSchema(document_name=name) for name in message.source_document_names],
+            sources=(
+                [SourceReferenceSchema.from_value_object(source) for source in message.sources]
+                if message.sources
+                else [SourceReferenceSchema(document_name=name) for name in message.source_document_names]
+            ),
         )
 
 

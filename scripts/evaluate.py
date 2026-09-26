@@ -43,14 +43,22 @@ from ragas.metrics import (
     ResponseRelevancy,
 )
 
+from app.application.services.context_assembler import ContextAssembler
+from app.application.services.knowledge_retriever import KnowledgeRetriever
+from app.application.use_cases.answer_student_query import (
+    NO_RETRIEVAL_MESSAGE,
+    NOT_GROUNDED_MESSAGE,
+)
 from app.domain.entities.conversation import Conversation
 from app.domain.entities.message import Message
 from app.domain.ports.conversation_repository_port import ConversationRepositoryPort
-from app.domain.value_objects.verified_answer import VerifiedAnswer
+from app.domain.services.query_analyzer import QueryAnalyzer
+from app.domain.value_objects.verified_answer import AnswerCoverage, VerifiedAnswer
 from app.infrastructure.adapters.llm.anthropic_llm_adapter import AnthropicLLMAdapter
 from app.infrastructure.adapters.llm.single_call_verification_adapter import (
     SingleCallVerificationAdapter,
 )
+from app.infrastructure.adapters.search.in_memory_corpus_index import InMemoryCorpusIndex
 from app.infrastructure.adapters.vector_store.chroma_vector_store import ChromaVectorStoreAdapter
 from app.infrastructure.adapters.vector_store.sentence_transformers_embedding import (
     SentenceTransformersEmbeddingAdapter,
@@ -60,6 +68,7 @@ from app.infrastructure.config.settings import (
     get_chroma_settings,
     get_rag_settings,
 )
+from app.infrastructure.rag_factory import build_context_assembler, build_retriever
 from app.shared.kernel.clock import utc_now
 from app.shared.kernel.ids import new_id
 
@@ -86,33 +95,31 @@ class _NullConversationRepository(ConversationRepositoryPort):
 
 async def _answer_one(
     question: str,
-    embedding_port: SentenceTransformersEmbeddingAdapter,
-    vector_store_port: ChromaVectorStoreAdapter,
+    retriever: KnowledgeRetriever,
+    assembler: ContextAssembler,
+    corpus_index: InMemoryCorpusIndex,
     verification_port: SingleCallVerificationAdapter,
-    top_k: int,
-    min_similarity_threshold: float,
 ) -> tuple[list[str], VerifiedAnswer | None, float]:
-    """Replica FR-06 a FR-10 con visibilidad completa del contexto recuperado (que la
-    respuesta HTTP de /chat no expone), necesaria para calcular las métricas de RAGAS.
+    """Replica la ruta fundamentada de producción (análisis, recuperación híbrida,
+    ensamblado y verificación) con visibilidad completa del contexto, que la respuesta
+    HTTP de /chat no expone y RAGAS necesita.
 
-    top_k/min_similarity_threshold se reciben desde RagSettings (docs/11-reproducibility.md)
-    para que esta evaluación use exactamente los mismos parámetros que producción — antes
-    este script fijaba sus propios valores locales, desincronizados de
-    AnswerStudentQueryUseCase.
+    Los componentes se construyen con `rag_factory`, igual que en el backend: lo que
+    se evalúa es, por construcción, lo que se despliega (docs/11-reproducibility.md).
     """
     started_at = time.perf_counter()
 
-    query_embedding = await asyncio.to_thread(embedding_port.embed_text, question)
-    candidates = await asyncio.to_thread(vector_store_port.search, query_embedding, top_k)
-    relevant = [c for c in candidates if c.score.meets_threshold(min_similarity_threshold)]
+    analysis = QueryAnalyzer.analyze(question, corpus_index.list_outlines())
+    ranked = await retriever.retrieve(analysis)
+    passages = assembler.assemble(ranked, parts=len(analysis.sub_queries))
 
-    if not relevant:
+    if not passages:
         elapsed = time.perf_counter() - started_at
         return [], None, elapsed
 
-    verified_answer = await verification_port.answer(question, relevant)
+    verified_answer = await verification_port.answer(question, passages)
     elapsed = time.perf_counter() - started_at
-    contexts = [rc.chunk.text for rc in relevant]
+    contexts = [p.chunk.text for p in passages]
     return contexts, verified_answer, elapsed
 
 
@@ -129,35 +136,41 @@ async def run_evaluation() -> None:
         persist_directory=chroma_settings.chroma_persist_dir,
         collection_name=rag_settings.chroma_collection_name,
     )
+    corpus_index = InMemoryCorpusIndex(loader=vector_store_port.iter_chunks, size_probe=vector_store_port.count)
+    lexical = corpus_index if rag_settings.retrieval_mode == "hybrid" else None
+    retriever = build_retriever(embedding_port, vector_store_port, lexical, rag_settings)
+    assembler = build_context_assembler(corpus_index, rag_settings)
     llm_port = AnthropicLLMAdapter(anthropic_settings)
     verification_port = SingleCallVerificationAdapter(llm_port)
 
     samples: list[SingleTurnSample] = []
     latencies: list[float] = []
+    input_tokens: list[int] = []
     abstention_correct = 0
     rows_for_report: list[dict] = []
 
     for case in cases:
         question = case["question"]
         contexts, verified_answer, elapsed = await _answer_one(
-            question,
-            embedding_port,
-            vector_store_port,
-            verification_port,
-            rag_settings.top_k,
-            rag_settings.min_similarity_threshold,
+            question, retriever, assembler, corpus_index, verification_port
         )
         latencies.append(elapsed)
+        if verified_answer and verified_answer.input_tokens is not None:
+            input_tokens.append(verified_answer.input_tokens)
 
-        is_grounded = verified_answer.is_grounded if verified_answer else False
+        is_grounded = bool(
+            verified_answer
+            and verified_answer.is_grounded
+            and verified_answer.coverage is not AnswerCoverage.NONE
+        )
         if is_grounded == case["expect_grounded"]:
             abstention_correct += 1
 
-        answer_text = (
-            verified_answer.answer_text
-            if verified_answer and verified_answer.is_grounded
-            else "No cuento con información suficiente en los documentos oficiales."
-        )
+        # Mismos textos de abstención que ve el estudiante (una sola fuente de verdad).
+        if is_grounded and verified_answer:
+            answer_text = verified_answer.answer_text
+        else:
+            answer_text = NOT_GROUNDED_MESSAGE if verified_answer else NO_RETRIEVAL_MESSAGE
 
         rows_for_report.append(
             {
@@ -214,6 +227,12 @@ async def run_evaluation() -> None:
             "manual_baseline_placeholder": MANUAL_BASELINE_LATENCY_SECONDS_PLACEHOLDER,
         },
         "abstention_accuracy": round(abstention_correct / len(cases), 3),
+        # NFR-02: tokens de entrada por llamada efectivamente realizada.
+        "input_tokens_per_call": {
+            "mean": round(statistics.mean(input_tokens), 1) if input_tokens else None,
+            "calls": len(input_tokens),
+        },
+        "pipeline": rag_settings.model_dump(),
         "cases": rows_for_report,
     }
 

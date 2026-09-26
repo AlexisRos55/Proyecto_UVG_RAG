@@ -29,9 +29,6 @@ from app.domain.ports.embedding_port import EmbeddingPort
 from app.domain.ports.user_repository_port import UserRepositoryPort
 from app.domain.ports.vector_store_port import VectorStorePort
 from app.domain.ports.verification_strategy_port import VerificationStrategyPort
-from app.infrastructure.adapters.document_processing.chunking_service import (
-    FixedSizeChunkingService,
-)
 from app.infrastructure.adapters.document_processing.document_indexing_pipeline import (
     DocumentIndexingPipeline,
 )
@@ -46,6 +43,7 @@ from app.infrastructure.adapters.persistence.postgres_document_repository import
     PostgresDocumentRepository,
 )
 from app.infrastructure.adapters.persistence.postgres_user_repository import PostgresUserRepository
+from app.infrastructure.adapters.search.in_memory_corpus_index import InMemoryCorpusIndex
 from app.infrastructure.config.settings import (
     AppSettings,
     AuthSettings,
@@ -53,6 +51,11 @@ from app.infrastructure.config.settings import (
     get_app_settings,
     get_auth_settings,
     get_rag_settings,
+)
+from app.infrastructure.rag_factory import (
+    build_context_assembler,
+    build_indexing_pipeline,
+    build_retriever,
 )
 from app.shared.exceptions.domain_errors import UnauthorizedError
 
@@ -69,6 +72,10 @@ def get_vector_store_port(request: Request) -> VectorStorePort:
 
 def get_text_extractor_port(request: Request) -> DocumentTextExtractorPort:
     return request.app.state.text_extractor_port
+
+
+def get_corpus_index(request: Request) -> InMemoryCorpusIndex | None:
+    return getattr(request.app.state, "corpus_index", None)
 
 
 def get_verification_port(request: Request) -> VerificationStrategyPort:
@@ -140,7 +147,9 @@ def get_answer_query_use_case(
     ],
     document_repository: Annotated[DocumentRepositoryPort, Depends(get_document_repository)],
     rag_settings: Annotated[RagSettings, Depends(get_rag_settings_dependency)],
+    corpus_index: Annotated[InMemoryCorpusIndex | None, Depends(get_corpus_index)],
 ) -> AnswerStudentQueryUseCase:
+    lexical = corpus_index if rag_settings.retrieval_mode == "hybrid" else None
     return AnswerStudentQueryUseCase(
         embedding_port=embedding_port,
         vector_store_port=vector_store_port,
@@ -151,6 +160,9 @@ def get_answer_query_use_case(
         min_similarity_threshold=rag_settings.min_similarity_threshold,
         # Sin estado ni configuración: se instancia por petición sin coste apreciable.
         intent_classifier=RuleBasedIntentClassifier(),
+        retriever=build_retriever(embedding_port, vector_store_port, lexical, rag_settings),
+        context_assembler=build_context_assembler(corpus_index, rag_settings),
+        corpus_catalog=corpus_index,
     )
 
 
@@ -160,14 +172,7 @@ def get_indexing_pipeline(
     vector_store_port: Annotated[VectorStorePort, Depends(get_vector_store_port)],
     rag_settings: Annotated[RagSettings, Depends(get_rag_settings_dependency)],
 ) -> DocumentIndexingPipeline:
-    return DocumentIndexingPipeline(
-        text_extractor=text_extractor,
-        embedding_port=embedding_port,
-        vector_store_port=vector_store_port,
-        chunking_service=FixedSizeChunkingService(
-            chunk_size=rag_settings.chunk_size, overlap=rag_settings.chunk_overlap
-        ),
-    )
+    return build_indexing_pipeline(text_extractor, embedding_port, vector_store_port, rag_settings)
 
 
 def get_ingest_document_use_case(

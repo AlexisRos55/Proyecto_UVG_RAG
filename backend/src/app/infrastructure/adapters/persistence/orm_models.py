@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import ForeignKey, Text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -60,6 +60,8 @@ class MessageModel(Base):
         ARRAY(PG_UUID(as_uuid=True)), nullable=False, default=list
     )
     source_document_names: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
+    # Nullable: los mensajes anteriores a ADR-0014 no tienen citas estructuradas.
+    sources: Mapped[list[dict[str, object]] | None] = mapped_column(JSONB, nullable=True)
 
     conversation: Mapped[ConversationModel] = relationship(back_populates="messages")
 

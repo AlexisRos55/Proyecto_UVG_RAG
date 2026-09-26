@@ -18,20 +18,20 @@ from app.application.dto.auth_dto import RegisterStudentRequest
 from app.application.dto.document_dto import IngestDocumentRequest
 from app.application.use_cases.ingest_document import IngestDocumentUseCase
 from app.application.use_cases.register_student import RegisterStudentUseCase
+from app.application.use_cases.trigger_reindex import TriggerReindexUseCase
 from app.domain.ports.auth_port import AuthPort
 from app.domain.ports.document_repository_port import DocumentRepositoryPort
 from app.domain.ports.document_text_extractor_port import DocumentTextExtractorPort
 from app.domain.ports.embedding_port import EmbeddingPort
 from app.domain.ports.vector_store_port import VectorStorePort
-from app.infrastructure.adapters.document_processing.document_indexing_pipeline import (
-    DocumentIndexingPipeline,
-)
 from app.infrastructure.adapters.persistence.postgres_document_repository import (
     PostgresDocumentRepository,
 )
 from app.infrastructure.adapters.persistence.postgres_user_repository import PostgresUserRepository
-from app.infrastructure.config.settings import AppSettings, AuthSettings
-from app.shared.exceptions.domain_errors import DuplicateUserError
+from app.infrastructure.adapters.vector_store.chroma_vector_store import ChromaVectorStoreAdapter
+from app.infrastructure.config.settings import AppSettings, AuthSettings, RagSettings
+from app.infrastructure.rag_factory import build_indexing_pipeline, index_signature
+from app.shared.exceptions.domain_errors import DomainError, DuplicateUserError
 
 
 async def seed_default_admin(
@@ -59,6 +59,7 @@ async def seed_documents_from_directory(
     embedding_port: EmbeddingPort,
     vector_store_port: VectorStorePort,
     app_settings: AppSettings,
+    rag_settings: RagSettings | None = None,
 ) -> None:
     directory = Path(app_settings.seed_documents_dir)
     if not directory.is_dir():
@@ -68,10 +69,11 @@ async def seed_documents_from_directory(
     document_repository: DocumentRepositoryPort = PostgresDocumentRepository(session)
     already_indexed = {d.filename for d in await document_repository.list_all()}
 
-    pipeline = DocumentIndexingPipeline(
-        text_extractor=text_extractor,
-        embedding_port=embedding_port,
-        vector_store_port=vector_store_port,
+    # Mismo pipeline que el panel administrativo y los scripts (rag_factory):
+    # antes esta siembra construía el suyo con los valores por defecto del
+    # constructor e ignoraba RagSettings.
+    pipeline = build_indexing_pipeline(
+        text_extractor, embedding_port, vector_store_port, rag_settings or RagSettings()
     )
     use_case = IngestDocumentUseCase(document_repository=document_repository, indexing_pipeline=pipeline)
 
@@ -86,3 +88,47 @@ async def seed_documents_from_directory(
             logger.info("Documento de arranque indexado: {} ({} fragmentos)", pdf_path.name, result.chunk_count)
         else:
             logger.error("Fallo al indexar documento de arranque {}: {}", pdf_path.name, result.error_message)
+
+
+async def ensure_index_matches_configuration(
+    session: AsyncSession,
+    chroma: ChromaVectorStoreAdapter,
+    text_extractor: DocumentTextExtractorPort,
+    embedding_port: EmbeddingPort,
+    vector_store_port: VectorStorePort,
+    rag_settings: RagSettings,
+) -> None:
+    """Reindexa todo si el índice se construyó con otra configuración (ADR-0012).
+
+    Sin esta comprobación, cambiar el modelo de embeddings o la estrategia de
+    fragmentación dejaría el índice mezclando vectores de dos esquemas: los
+    documentos antiguos seguirían con fragmentos de 1000 caracteres sin
+    estructura y los nuevos con la estructural, y las consultas compararían
+    vectores que no son comparables. Se ejecuta antes de la siembra, que solo
+    indexa documentos que aún no existen.
+    """
+    expected = index_signature(rag_settings)
+    stored = chroma.read_index_signature()
+    if stored == expected:
+        return
+
+    document_repository = PostgresDocumentRepository(session)
+    documents = await document_repository.list_all()
+    if documents and chroma.count() > 0:
+        logger.warning(
+            "El índice vectorial se construyó con otra configuración ({} → {}); reindexando {} documentos",
+            stored or "desconocida",
+            expected,
+            len(documents),
+        )
+        pipeline = build_indexing_pipeline(text_extractor, embedding_port, vector_store_port, rag_settings)
+        use_case = TriggerReindexUseCase(document_repository, vector_store_port, pipeline)
+        for document in documents:
+            try:
+                result = await use_case.execute(document.id)
+                await session.commit()
+                logger.info("Reindexado: {} ({} fragmentos)", document.filename, result.chunk_count)
+            except DomainError as error:
+                await session.rollback()
+                logger.error("No fue posible reindexar {}: {}", document.filename, error)
+    chroma.write_index_signature(expected)

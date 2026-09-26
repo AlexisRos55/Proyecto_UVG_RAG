@@ -28,6 +28,12 @@ _SKILL_BY_INTENT = {
     ConversationIntent.OUT_OF_DOMAIN: SkillName.DECLINE_OUT_OF_DOMAIN,
     ConversationIntent.PERSONAL_DATA: SkillName.DECLINE_PERSONAL_DATA,
     ConversationIntent.PROMPT_INJECTION: SkillName.RESIST_INJECTION,
+    ConversationIntent.CONTINUATION: SkillName.RESUME_CONVERSATION,
+    ConversationIntent.DOCUMENT_OVERVIEW: SkillName.DESCRIBE_DOCUMENT,
+    ConversationIntent.DOCUMENT_STRUCTURE: SkillName.OUTLINE_DOCUMENT,
+    ConversationIntent.TOPIC_LOCATION: SkillName.LOCATE_TOPIC,
+    ConversationIntent.DOCUMENT_ROUTING: SkillName.RECOMMEND_DOCUMENTS,
+    ConversationIntent.RELATED_DOCUMENTS: SkillName.RELATE_DOCUMENTS,
 }
 
 # --- Señales léxicas de formato -------------------------------------------------
@@ -35,8 +41,27 @@ _STEPS = re.compile(r"\bcomo\s+(?:me\s+)?(?:puedo\s+)?(inscrib|solicit|tramit|ap
 _COMPARISON = re.compile(r"\bdiferencia\b|\bversus\b|\bvs\b|\bcual\s+(?:me\s+)?(?:conviene|es\s+mejor)\b|\bcomparar\b")
 _DEFINITION = re.compile(r"\bque\s+(?:significa|es|son)\b|\bdefinicion\b|\ben\s+que\s+consiste\b")
 _DIRECT = re.compile(r"\bcuanto\b|\bcuando\b|\bdonde\b|\bcual\s+es\s+el\s+(?:monto|plazo|porcentaje|limite)\b")
-_ENUMERABLE = re.compile(r"\bque\s+(becas|requisitos|beneficios|documentos|pasos|opciones|tipos|seguros)\b")
+_ENUMERABLE = re.compile(r"\bque\s+(becas|requisitos|beneficios|documentos|pasos|opciones|tipos|seguros)\b|\bcuales\s+son\s+(?:los|las)\b")
 _QUESTION_MARK = re.compile(r"\?")
+# «¿Cuál cubre más?», «¿cuál tiene mejores beneficios?», «¿cuál conviene más?».
+_RANKING = re.compile(
+    r"\bcual(?:es)?\s+(?:\w+\s+){0,3}(?:mas|mejor(?:es)?|mayor(?:es)?|menos|menor(?:es)?)\b"
+    r"|\bcual\s+(?:me\s+)?(?:recomiendas|recomendarias|conviene)\b"
+)
+_TABLE = re.compile(r"\b(?:tabla|cuadro\s+comparativo)\b")
+_FAQ = re.compile(r"\bpreguntas\s+frecuentes\b|\bdudas\s+(?:comunes|frecuentes)\b")
+_CONSEQUENCES = re.compile(
+    r"\bque\s+(?:pasa|sucede|ocurre)\s+si\b|\bconsecuencias?\b|\bpuedo\s+perder\b|\bpierdo\b"
+    r"|\bsancion\w*\b|\bpenaliza\w*\b"
+)
+_SUMMARY = re.compile(r"\bresum\w*\b|\ben\s+pocas\s+palabras\b|\bbrevemente\b")
+_RECOMMENDATION = re.compile(r"\brecomiend\w*\b|\brecomendacion\b|\bque\s+me\s+conviene\b|\bdeberia\b")
+_ADVANTAGES = re.compile(r"\bventajas?\b|\bbeneficios\s+de\b|\bque\s+gano\b")
+_EXPLANATION = re.compile(r"\bpor\s+que\b|\bexplica\w*\b|\bcomo\s+funciona\b")
+_YES_NO = re.compile(
+    r"^(?:y\s+)?(?:puedo|se\s+puede|es\s+posible|es\s+obligatorio|es\s+necesario|debo|tengo\s+que|hay\s+que"
+    r"|existe|cubre|incluye|aplica|los?\s+\w+\s+pueden|las?\s+\w+\s+pueden)\b"
+)
 
 # Referencias que solo tienen sentido con el turno anterior delante.
 _ANAPHORA = re.compile(
@@ -52,18 +77,28 @@ def detect_style(normalized_query: str) -> ResponseStyle:
     Cuando ninguna señal aplica devuelve `UNSPECIFIED` y el modelo decide, que es
     el comportamiento actual y un buen valor por defecto.
     """
+    # El orden es de especificidad: una petición explícita de forma («en una
+    # tabla») gana a la forma que sugiere la pregunta.
     if len(_QUESTION_MARK.findall(normalized_query)) >= 2:
         return ResponseStyle.SECTIONED
-    if _STEPS.search(normalized_query):
-        return ResponseStyle.STEPS
-    if _COMPARISON.search(normalized_query):
-        return ResponseStyle.COMPARISON
-    if _DEFINITION.search(normalized_query):
-        return ResponseStyle.DEFINITION
-    if _ENUMERABLE.search(normalized_query):
-        return ResponseStyle.LIST
-    if _DIRECT.search(normalized_query):
-        return ResponseStyle.DIRECT
+    for pattern, style in (
+        (_TABLE, ResponseStyle.TABLE),
+        (_FAQ, ResponseStyle.FAQ),
+        (_STEPS, ResponseStyle.STEPS),
+        (_RANKING, ResponseStyle.RANKING),
+        (_COMPARISON, ResponseStyle.COMPARISON),
+        (_CONSEQUENCES, ResponseStyle.CONSEQUENCES),
+        (_SUMMARY, ResponseStyle.SUMMARY),
+        (_RECOMMENDATION, ResponseStyle.RECOMMENDATION),
+        (_ADVANTAGES, ResponseStyle.ADVANTAGES),
+        (_DEFINITION, ResponseStyle.DEFINITION),
+        (_EXPLANATION, ResponseStyle.EXPLANATION),
+        (_ENUMERABLE, ResponseStyle.LIST),
+        (_YES_NO, ResponseStyle.YES_NO),
+        (_DIRECT, ResponseStyle.DIRECT),
+    ):
+        if pattern.search(normalized_query):
+            return style
     return ResponseStyle.UNSPECIFIED
 
 
@@ -108,6 +143,15 @@ def decide(
     que es exactamente lo que ocurre hoy con todos los mensajes.
     """
     intent = classification.intent
+
+    if intent.is_navigational and classification.confidence >= MIN_CONFIDENCE_FOR_LOCAL_SKILL:
+        # Navegación documental: se responde con el catálogo, pero la consulta
+        # se conserva para localizar el tema y resolver el documento aludido.
+        return ResponsePlan(
+            skill=_SKILL_BY_INTENT[intent],
+            intent=intent,
+            resolved_query=prompt_query or normalized_query,
+        )
 
     if intent.needs_retrieval or classification.confidence < MIN_CONFIDENCE_FOR_LOCAL_SKILL:
         # El texto que ve el modelo conserva la ortografía original; la detección
