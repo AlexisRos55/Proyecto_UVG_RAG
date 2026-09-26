@@ -57,6 +57,12 @@ class AnthropicLLMAdapter(LLMPort):
             raise LLMGenerationError(f"Error al invocar el modelo de Anthropic: {exc}") from exc
 
         elapsed_ms = (time.perf_counter() - started_at) * 1000
+        if getattr(response, "stop_reason", None) == "max_tokens":
+            # La salida estructurada quedó cortada: el JSON está incompleto y faltarían
+            # campos. Se informa la causa real en lugar de un «campo ausente» engañoso.
+            raise LLMGenerationError(
+                f"La respuesta del modelo se truncó al alcanzar max_tokens={self._max_tokens}"
+            )
         tool_use_block = next(
             (block for block in response.content if block.type == "tool_use"), None
         )

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from app.domain.value_objects.conversation_intent import ConversationIntent
 
@@ -28,6 +29,8 @@ class ConversationContext:
     topic_documents: tuple[str, ...] = ()
     consecutive_abstentions: int = 0
     turn_count: int = 0
+    topic_document_ids: tuple[UUID, ...] = ()
+    """Documentos citados en la última respuesta fundamentada: resuelven «ese reglamento»."""
 
     @property
     def is_first_turn(self) -> bool:
@@ -59,9 +62,13 @@ class ConversationContext:
                 break
 
         topic_documents: tuple[str, ...] = ()
+        topic_document_ids: tuple[UUID, ...] = ()
         for message in reversed(assistant_messages):
-            if message.is_grounded and message.source_document_names:
+            if message.is_grounded and (message.source_document_names or message.sources):
                 topic_documents = tuple(message.source_document_names)
+                topic_document_ids = tuple(
+                    dict.fromkeys(s.document_id for s in message.sources if s.document_id is not None)
+                )
                 break
 
         return cls(
@@ -71,4 +78,5 @@ class ConversationContext:
             topic_documents=topic_documents,
             consecutive_abstentions=consecutive_abstentions,
             turn_count=len(student_messages),
+            topic_document_ids=topic_document_ids,
         )

@@ -54,6 +54,37 @@ export function documentTitle(rawName: string): string {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
+type CitableSource = {
+  document_name: string;
+  page_number: number | null;
+  document_title?: string | null;
+  section?: string | null;
+  page_end?: number | null;
+};
+
+/**
+ * Título de la fuente. El backend ya envía el título que declara el propio
+ * documento (membrete o metadatos del PDF); el nombre de archivo solo se
+ * limpia como respaldo para mensajes anteriores a la Fase 9.
+ */
+export function sourceTitle(source: CitableSource): string {
+  return source.document_title?.trim() || documentTitle(source.document_name);
+}
+
+/** «Capítulo IV · Artículo 18. Condiciones · págs. 10–11», o solo la página. */
+export function sourceLocation(source: CitableSource): string | null {
+  const parts: string[] = [];
+  if (source.section) parts.push(source.section);
+  if (source.page_number != null) {
+    parts.push(
+      source.page_end != null && source.page_end !== source.page_number
+        ? `págs. ${source.page_number}–${source.page_end}`
+        : `pág. ${source.page_number}`,
+    );
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
+
 /**
  * Descarta repeticiones del mismo documento conservando el orden de llegada.
  *
@@ -62,13 +93,13 @@ export function documentTitle(rawName: string): string {
  * a ordenar por pertinencia. El corpus contiene duplicados reales, y sin esto
  * la misma referencia aparece dos veces bajo una respuesta.
  */
-export function dedupeSources<T extends { document_name: string; page_number: number | null }>(
-  sources: readonly T[],
-): T[] {
+export function dedupeSources<T extends CitableSource>(sources: readonly T[]): T[] {
   const seen = new Set<string>();
   const unique: T[] = [];
   for (const source of sources) {
-    const key = `${documentTitle(source.document_name).toLowerCase()}|${source.page_number ?? ""}`;
+    // El apartado forma parte de la identidad: dos artículos del mismo
+    // reglamento son dos referencias distintas.
+    const key = `${sourceTitle(source).toLowerCase()}|${source.section ?? ""}|${source.page_number ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(source);

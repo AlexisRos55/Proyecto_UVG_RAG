@@ -32,8 +32,13 @@ class FakeVectorStorePort(VectorStorePort):
     def upsert_chunks(self, chunks: Sequence[Chunk]) -> None:
         self.upserted_chunks.extend(chunks)
 
-    def search(self, query_embedding: EmbeddingVector, top_k: int) -> list[RetrievedChunk]:
-        return self._seeded_results[:top_k]
+    def search(
+        self, query_embedding: EmbeddingVector, top_k: int, document_ids=None
+    ) -> list[RetrievedChunk]:
+        results = self._seeded_results
+        if document_ids is not None:
+            results = [r for r in results if r.chunk.document_id in document_ids]
+        return results[:top_k]
 
     def delete_by_document_id(self, document_id) -> None:
         self.upserted_chunks = [c for c in self.upserted_chunks if c.document_id != document_id]

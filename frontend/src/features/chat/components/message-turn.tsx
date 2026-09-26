@@ -22,7 +22,8 @@ import {
   dedupeSources,
   documentKind,
   documentKindLabel,
-  documentTitle,
+  sourceLocation,
+  sourceTitle,
   type DocumentKind,
 } from "@/shared/lib/document-label";
 import type { MessageDto, SourceReference, VerificationConfidence } from "@/shared/types/api";
@@ -132,10 +133,12 @@ function SourceList({
           El cambio de superficie al pasar el cursor comunica «objeto», no «acción». */}
       <ul className="mt-3.5 grid gap-2 sm:grid-cols-2">
         {unique.map((source, index) => {
-          const Icon = KIND_ICON[documentKind(source.document_name)];
+          const title = sourceTitle(source);
+          const Icon = KIND_ICON[documentKind(title)];
+          const location = sourceLocation(source);
           return (
             <li
-              key={`${index}-${source.document_name}-${source.page_number ?? "n"}`}
+              key={`${index}-${source.document_name}-${source.section ?? ""}-${source.page_number ?? "n"}`}
               className="ring-hairline hover:bg-surface-raised-hover flex items-start gap-3 rounded-xl px-3 py-2.5 ring-1 transition-colors duration-200 ease-soft"
             >
               <span className="bg-muted text-muted-foreground mt-px flex size-7 shrink-0 items-center justify-center rounded-lg">
@@ -143,14 +146,17 @@ function SourceList({
               </span>
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="text-caption text-foreground leading-snug font-medium">
-                  {documentTitle(source.document_name)}
+                  {title}
                 </span>
+                {/* El apartado citado es lo que convierte la fuente en una
+                    referencia verificable: artículo y página, no solo el archivo. */}
+                {location && (
+                  <span className="text-micro text-foreground/80 leading-snug tracking-normal">
+                    {location}
+                  </span>
+                )}
                 <span className="text-micro text-text-tertiary tracking-normal">
-                  {documentKindLabel(source.document_name)}
-                  {/* El número de página está modelado en el backend pero es
-                      siempre nulo en este sprint: la ingesta todavía no lo
-                      registra. Se dibuja sólo cuando llega de verdad. */}
-                  {source.page_number != null && ` · pág. ${source.page_number}`}
+                  {documentKindLabel(title)}
                 </span>
               </span>
             </li>

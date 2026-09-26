@@ -1,0 +1,811 @@
+{
+  "description": "Banco de CONVERSACIONES multiturno sobre el corpus oficial de UVG Altiplano (Fase 9, capa de inteligencia de recuperación). Cada turno declara qué debe ocurrir: los hechos que el contexto entregado al modelo (o la respuesta determinista) debe contener, términos que la consulta interna debe incluir para demostrar que la referencia se resolvió, y si lo correcto es abstenerse. Etiquetado por el equipo de desarrollo a partir del texto de los documentos.",
+  "conversations": [
+    {
+      "id": "becas-hilo",
+      "description": "El hilo del enunciado de la Fase 9: tema amplio, referencias y aspectos sucesivos.",
+      "turns": [
+        {
+          "message": "Háblame de las becas.",
+          "facts": [
+            [
+              "programa regular"
+            ],
+            [
+              "programa de talento",
+              "apoyo especial",
+              "becas trasciende",
+              "beca despega"
+            ]
+          ]
+        },
+        {
+          "message": "¿Cuánto cubre esa?",
+          "facts": [
+            [
+              "artículo 17. cobertura",
+              "artículo 24. cobertura",
+              "artículo 32. cobertura"
+            ]
+          ],
+          "query_terms": [
+            "beca"
+          ]
+        },
+        {
+          "message": "¿Y cuáles son los requisitos?",
+          "facts": [
+            [
+              "artículo 16. requisitos",
+              "artículo 23. requisitos",
+              "artículo 31. requisitos"
+            ]
+          ],
+          "query_terms": [
+            "beca"
+          ]
+        },
+        {
+          "message": "¿Hasta cuándo puedo aplicar?",
+          "query_terms": [
+            "beca"
+          ]
+        },
+        {
+          "message": "¿Pierdo la beca si bajo mi promedio?",
+          "facts": [
+            [
+              "promedio mínimo de 65 puntos",
+              "cursos reprobados o retirados",
+              "reprobación o retiro de cursos"
+            ]
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "continuidad-social",
+      "description": "Los turnos sociales no deben romper el tema activo.",
+      "turns": [
+        {
+          "message": "Hola"
+        },
+        {
+          "message": "Becas"
+        },
+        {
+          "message": "Requisitos",
+          "facts": [
+            [
+              "artículo 16. requisitos",
+              "artículo 23. requisitos",
+              "artículo 31. requisitos"
+            ]
+          ],
+          "query_terms": [
+            "beca"
+          ]
+        },
+        {
+          "message": "Cobertura",
+          "facts": [
+            [
+              "artículo 17. cobertura",
+              "artículo 24. cobertura",
+              "artículo 32. cobertura"
+            ]
+          ],
+          "query_terms": [
+            "beca"
+          ]
+        },
+        {
+          "message": "Gracias"
+        },
+        {
+          "message": "Hola",
+          "answer_contains": [
+            "beca"
+          ]
+        },
+        {
+          "message": "Continuemos",
+          "answer_contains": [
+            "beca"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "entidad-enfocada",
+      "description": "Una beca concreta se mantiene como foco en las preguntas siguientes.",
+      "turns": [
+        {
+          "message": "¿Qué es la beca Despega?",
+          "facts": [
+            [
+              "colaboradores de las entidades aliadas al programa ave"
+            ]
+          ]
+        },
+        {
+          "message": "¿Cuánto cubre?",
+          "facts": [
+            [
+              "hasta un 15%"
+            ]
+          ],
+          "query_terms": [
+            "despega"
+          ]
+        },
+        {
+          "message": "¿Y quién puede solicitarla?",
+          "facts": [
+            [
+              "artículo 31. requisitos",
+              "requisitos ave trasciende despega transforma"
+            ]
+          ],
+          "query_terms": [
+            "despega"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "elecciones",
+      "description": "Sujeto implícito en preguntas cortas.",
+      "turns": [
+        {
+          "message": "¿Cómo funcionan las elecciones estudiantiles?",
+          "facts": [
+            [
+              "sistema electoral",
+              "consejo electoral",
+              "proceso electoral"
+            ]
+          ]
+        },
+        {
+          "message": "¿A qué hora son?",
+          "facts": [
+            [
+              "jueves a las 10:00 horas"
+            ]
+          ],
+          "query_terms": [
+            "eleccion"
+          ]
+        },
+        {
+          "message": "¿Y si hay empate?",
+          "facts": [
+            [
+              "en caso de empate"
+            ]
+          ],
+          "query_terms": [
+            "eleccion"
+          ]
+        },
+        {
+          "message": "¿Quién decide eso?",
+          "facts": [
+            [
+              "consejo electoral"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "documento-activo",
+      "description": "El documento nombrado sigue activo aunque no se repita.",
+      "turns": [
+        {
+          "message": "¿De qué trata el reglamento de grupos estudiantiles?",
+          "answer_contains": [
+            "Reglamento de grupos estudiantiles"
+          ]
+        },
+        {
+          "message": "¿Qué dice sobre los clubes?",
+          "facts": [
+            [
+              "constitución de los clubes",
+              "clasificación de los clubes",
+              "clubes deportivos"
+            ]
+          ]
+        },
+        {
+          "message": "¿Cuántos miembros necesita su junta directiva?",
+          "facts": [
+            [
+              "mínimo de cinco estudiantes"
+            ]
+          ],
+          "query_terms": [
+            "club"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cambio-de-tema",
+      "description": "Un tema nuevo reemplaza al anterior en lugar de mezclarse con él.",
+      "turns": [
+        {
+          "message": "¿Cuál es el interés del crédito educativo?",
+          "facts": [
+            [
+              "interés variable del 10% anual"
+            ]
+          ]
+        },
+        {
+          "message": "¿Y cuándo es la ceremonia de graduación?",
+          "facts": [
+            [
+              "14 de noviembre: ceremonia de graduación"
+            ]
+          ],
+          "forbidden_query_terms": [
+            "credit"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "navegacion-articulos",
+      "description": "«El siguiente» se resuelve contra el artículo activo.",
+      "turns": [
+        {
+          "message": "¿Qué dice el artículo 58 del reglamento de grupos estudiantiles?",
+          "facts": [
+            [
+              "artículo 58. horario"
+            ]
+          ]
+        },
+        {
+          "message": "¿Y el siguiente?",
+          "facts": [
+            [
+              "artículo 59. calendario del proceso electoral"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "abstencion-en-hilo",
+      "description": "Un seguimiento de un tema sin respaldo documental sigue sin respaldo: no salta a otro tema.",
+      "turns": [
+        {
+          "message": "Háblame del seguro médico estudiantil contra accidentes.",
+          "abstain": true
+        },
+        {
+          "message": "¿Y cuánto cubre?",
+          "abstain": true
+        }
+      ]
+    },
+    {
+      "id": "caso1-becas-larga",
+      "description": "Caso 1 de la Fase 9.2: hilo largo con pausa y reanudación al día siguiente.",
+      "turns": [
+        {
+          "message": "Hola"
+        },
+        {
+          "message": "Quiero información sobre becas",
+          "facts": [
+            [
+              "programa regular"
+            ],
+            [
+              "programa de talento",
+              "apoyo especial",
+              "beca despega",
+              "becas trasciende"
+            ]
+          ],
+          "grounded_path": true
+        },
+        {
+          "message": "¿Cuáles existen?",
+          "query_terms": [
+            "beca"
+          ],
+          "facts": [
+            [
+              "programa regular",
+              "tipos de ayudas financieras"
+            ]
+          ]
+        },
+        {
+          "message": "¿Cuál cubre más?",
+          "query_terms": [
+            "beca"
+          ],
+          "facts": [
+            [
+              "artículo 17. cobertura",
+              "artículo 24. cobertura",
+              "artículo 32. cobertura",
+              "hasta un 15%",
+              "entre 5% y 25%"
+            ]
+          ]
+        },
+        {
+          "message": "¿Y esa tiene requisitos?",
+          "query_terms": [
+            "beca"
+          ],
+          "facts": [
+            [
+              "artículo 16. requisitos",
+              "artículo 23. requisitos",
+              "artículo 31. requisitos"
+            ]
+          ]
+        },
+        {
+          "message": "¿Qué pasa si bajo mi promedio?",
+          "query_terms": [
+            "beca"
+          ],
+          "facts": [
+            [
+              "promedio mínimo de 65 puntos",
+              "cursos reprobados o retirados",
+              "reprobación o retiro de cursos"
+            ]
+          ]
+        },
+        {
+          "message": "¿Y cuándo puedo aplicar?",
+          "query_terms": [
+            "beca"
+          ]
+        },
+        {
+          "message": "Perfecto gracias",
+          "no_llm": true
+        },
+        {
+          "message": "Continuemos mañana",
+          "no_llm": true,
+          "answer_contains": [
+            "beca"
+          ]
+        },
+        {
+          "message": "Hola",
+          "no_llm": true,
+          "answer_contains": [
+            "beca"
+          ]
+        },
+        {
+          "message": "Sigamos con las becas",
+          "answer_contains": [
+            "beca"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "caso2-cambio-carrera",
+      "description": "Caso 2: proceso con sujeto implícito y cambio de tema explícito.",
+      "turns": [
+        {
+          "message": "Hola"
+        },
+        {
+          "message": "Quiero cambiar de carrera",
+          "facts": [
+            [
+              "cambio de carrera"
+            ]
+          ]
+        },
+        {
+          "message": "¿Cuál es el proceso?",
+          "query_terms": [
+            "carrera"
+          ]
+        },
+        {
+          "message": "¿Y cuánto tarda?",
+          "query_terms": [
+            "carrera"
+          ]
+        },
+        {
+          "message": "¿Necesito autorización?",
+          "query_terms": [
+            "carrera"
+          ]
+        },
+        {
+          "message": "¿Quién la da?",
+          "query_terms": [
+            "carrera"
+          ]
+        },
+        {
+          "message": "Perfecto",
+          "no_llm": true
+        },
+        {
+          "message": "Ahora háblame del seguro",
+          "forbidden_query_terms": [
+            "carrera"
+          ],
+          "abstain": true,
+          "answer_contains": [
+            "seguro"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "caso3-navegacion",
+      "description": "Caso 3: navegación por artículos de un reglamento.",
+      "turns": [
+        {
+          "message": "Háblame del reglamento estudiantil",
+          "answer_contains": [
+            "grupos estudiantiles"
+          ]
+        },
+        {
+          "message": "Artículo 20",
+          "facts": [
+            [
+              "artículo 20. de los fines"
+            ]
+          ]
+        },
+        {
+          "message": "¿Y el siguiente?",
+          "facts": [
+            [
+              "artículo 21. limitación a las asociaciones"
+            ]
+          ]
+        },
+        {
+          "message": "¿Y el anterior?",
+          "facts": [
+            [
+              "artículo 20. de los fines"
+            ]
+          ]
+        },
+        {
+          "message": "Explícalo",
+          "facts": [
+            [
+              "artículo 20. de los fines"
+            ]
+          ]
+        },
+        {
+          "message": "Dame un ejemplo",
+          "facts": [
+            [
+              "artículo 20. de los fines"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "caso4-comparacion",
+      "description": "Caso 4: comparaciones y recomendaciones con memoria de carrera.",
+      "turns": [
+        {
+          "message": "¿Qué becas existen?",
+          "facts": [
+            [
+              "programa regular",
+              "tipos de ayudas financieras"
+            ]
+          ]
+        },
+        {
+          "message": "¿Cuál conviene más para Ingeniería?",
+          "query_terms": [
+            "beca",
+            "ingenier"
+          ]
+        },
+        {
+          "message": "¿Y para Tecnología?",
+          "query_terms": [
+            "beca",
+            "tecnolog"
+          ],
+          "forbidden_query_terms": [
+            "ingenier"
+          ]
+        },
+        {
+          "message": "¿Cuál tiene mejores beneficios?",
+          "query_terms": [
+            "beca"
+          ]
+        },
+        {
+          "message": "¿Cuál recomendarías revisar primero?",
+          "query_terms": [
+            "beca"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "caso5-seguro",
+      "description": "Caso 5: tema sin respaldo documental; debe sentirse conversación, no búsquedas sueltas.",
+      "turns": [
+        {
+          "message": "Háblame del seguro",
+          "abstain": true,
+          "answer_contains": [
+            "seguro"
+          ]
+        },
+        {
+          "message": "¿Cuánto cubre?",
+          "abstain": true,
+          "answer_contains": [
+            "seguro"
+          ]
+        },
+        {
+          "message": "¿Y si ocurre fuera del campus?",
+          "abstain": true,
+          "answer_contains": [
+            "seguro"
+          ]
+        },
+        {
+          "message": "¿Qué exclusiones tiene?",
+          "abstain": true,
+          "answer_contains": [
+            "seguro"
+          ]
+        },
+        {
+          "message": "¿Y enfermedades?",
+          "abstain": true,
+          "answer_contains": [
+            "seguro"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-perdido",
+      "description": "Fase 10: estudiante que no sabe qué preguntar; la orientación es local y concreta.",
+      "turns": [
+        {
+          "message": "Hola",
+          "answer_contains": [
+            "becas"
+          ]
+        },
+        {
+          "message": "no sé qué preguntar",
+          "no_llm": true,
+          "answer_contains": [
+            "becas"
+          ]
+        },
+        {
+          "message": "estoy perdido",
+          "no_llm": true,
+          "answer_contains": [
+            "becas"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-no-entiendo",
+      "description": "Fase 10: «no entiendo» con tema activo pide explicarlo de otra forma, sin perder el tema.",
+      "turns": [
+        {
+          "message": "¿Cómo funcionan las elecciones estudiantiles?"
+        },
+        {
+          "message": "no entiendo",
+          "query_terms": [
+            "eleccion"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-pronombre-objeto",
+      "description": "Fase 10: «¿Quién la da?» se refiere a la autorización recién preguntada.",
+      "turns": [
+        {
+          "message": "Quiero cambiar de carrera"
+        },
+        {
+          "message": "¿Necesito autorización?",
+          "query_terms": [
+            "carrera"
+          ],
+          "facts": [
+            [
+              "autorización escrita de la entidad patrocinadora"
+            ]
+          ]
+        },
+        {
+          "message": "¿Quién la da?",
+          "query_terms": [
+            "carrera",
+            "autoriz"
+          ],
+          "facts": [
+            [
+              "autorización escrita de la entidad patrocinadora"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-pronombre-tercera",
+      "description": "Fase 10: pronombre átono de tercera persona («¿quién las organiza?»).",
+      "turns": [
+        {
+          "message": "¿Cómo funcionan las elecciones estudiantiles?"
+        },
+        {
+          "message": "¿Quién las organiza?",
+          "query_terms": [
+            "eleccion"
+          ],
+          "facts": [
+            [
+              "consejo electoral"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-esa-oficina",
+      "description": "Fase 10: «esa oficina» es la instancia nombrada antes.",
+      "turns": [
+        {
+          "message": "¿Quién organiza las elecciones estudiantiles?",
+          "facts": [
+            [
+              "consejo electoral"
+            ]
+          ]
+        },
+        {
+          "message": "¿Y esa oficina qué más hace?",
+          "query_terms": [
+            "electoral"
+          ],
+          "facts": [
+            [
+              "artículo 45: funciones",
+              "funciones del consejo electoral"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-beca-de-antes",
+      "description": "Fase 10: «esa beca de antes» vuelve a la beca de hace varios turnos.",
+      "turns": [
+        {
+          "message": "¿Qué es la beca Despega?"
+        },
+        {
+          "message": "¿Cuánto cubre?",
+          "query_terms": [
+            "despega"
+          ]
+        },
+        {
+          "message": "Háblame de los clubes"
+        },
+        {
+          "message": "¿Cuántos miembros necesitan?",
+          "query_terms": [
+            "club"
+          ]
+        },
+        {
+          "message": "¿Y esa beca de antes pide promedio?",
+          "query_terms": [
+            "despega"
+          ],
+          "forbidden_query_terms": [
+            "club"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-comparacion",
+      "description": "Fase 10: la recomendación sigue comparando las dos becas nombradas.",
+      "turns": [
+        {
+          "message": "¿Qué diferencia hay entre la Beca Despega y la Beca Trasciende?",
+          "facts": [
+            [
+              "artículo 28. becas trasciende"
+            ],
+            [
+              "artículo 29. beca despega"
+            ]
+          ]
+        },
+        {
+          "message": "¿Y cuál me conviene si trabajo en una empresa aliada?",
+          "query_terms": [
+            "despega",
+            "trasciende"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-volviendo",
+      "description": "Fase 10: «volviendo a las elecciones» retoma ese tema tras otro.",
+      "turns": [
+        {
+          "message": "¿Cómo funcionan las elecciones estudiantiles?"
+        },
+        {
+          "message": "Háblame del crédito educativo"
+        },
+        {
+          "message": "Volviendo a las elecciones, ¿y si hay empate?",
+          "query_terms": [
+            "eleccion"
+          ],
+          "facts": [
+            [
+              "en caso de empate"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p10-una-palabra",
+      "description": "Fase 10: una sola palabra de tema abre el panorama del tema, no un índice.",
+      "turns": [
+        {
+          "message": "becas",
+          "grounded_path": true,
+          "facts": [
+            [
+              "programa regular"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

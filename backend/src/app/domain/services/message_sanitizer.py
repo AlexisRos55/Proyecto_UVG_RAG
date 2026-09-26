@@ -22,7 +22,11 @@ _INJECTION_PATTERNS = (
 
 # Delimitadores estructurales del prompt. Si el usuario los escribe, dejan de ser
 # estructura y pasan a ser texto.
-_STRUCTURAL_MARKERS = re.compile(r"\[/?Fragmento[^\]]*\]|CONTEXTO RECUPERADO:|PREGUNTA DEL ESTUDIANTE:")
+_STRUCTURAL_MARKERS = re.compile(
+    r"\[/?Fragmento[^\]]*\]|CONTEXTO RECUPERADO:|FRAGMENTOS OFICIALES:|PREGUNTA DEL ESTUDIANTE:"
+    r"|FORMATO DE LA RESPUESTA:|^\s*\[\d{1,3}\]",
+    re.MULTILINE,
+)
 
 _WHITESPACE = re.compile(r"\s+")
 _PUNCTUATION_EDGES = re.compile(r"^[¿¡\s.,;:!?]+|[\s.,;:!?]+$")

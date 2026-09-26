@@ -4,10 +4,8 @@ from loguru import logger
 
 from app.application.dto.document_dto import IngestDocumentRequest, IngestDocumentResult
 from app.domain.entities.document import Document, DocumentStatus
+from app.domain.ports.document_indexer_port import DocumentIndexerPort
 from app.domain.ports.document_repository_port import DocumentRepositoryPort
-from app.infrastructure.adapters.document_processing.document_indexing_pipeline import (
-    DocumentIndexingPipeline,
-)
 from app.shared.exceptions.domain_errors import DomainError
 from app.shared.kernel.clock import utc_now
 from app.shared.kernel.ids import new_id
@@ -21,7 +19,7 @@ class IngestDocumentUseCase:
     def __init__(
         self,
         document_repository: DocumentRepositoryPort,
-        indexing_pipeline: DocumentIndexingPipeline,
+        indexing_pipeline: DocumentIndexerPort,
     ) -> None:
         self._document_repository = document_repository
         self._indexing_pipeline = indexing_pipeline
@@ -37,7 +35,9 @@ class IngestDocumentUseCase:
         await self._document_repository.add(document)
 
         try:
-            chunks = await self._indexing_pipeline.process(document.id, request.file_path)
+            chunks = await self._indexing_pipeline.process(
+                document.id, request.file_path, display_name=request.filename
+            )
 
             document.mark_indexed(utc_now())
             await self._document_repository.update_status(document.id, DocumentStatus.INDEXED)
