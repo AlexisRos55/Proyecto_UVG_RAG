@@ -62,10 +62,12 @@ class FakeVerificationStrategyPort(VerificationStrategyPort):
         )
         self.received_questions: list[str] = []
         self.received_style_directives: list[str | None] = []
+        self.received_contexts: list[list] = []
 
     async def answer(
         self, question: str, context_chunks, style_directive: str | None = None
     ) -> VerifiedAnswer:
         self.received_questions.append(question)
         self.received_style_directives.append(style_directive)
+        self.received_contexts.append(list(context_chunks))
         return self.configured_answer

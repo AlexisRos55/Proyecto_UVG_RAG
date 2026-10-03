@@ -21,6 +21,8 @@ _MONTHS = (
 _MONTH_HEADING = re.compile(rf"^({'|'.join(_MONTHS)})(?:\s+(\d{{4}}))?$")
 _ROW_TOLERANCE = 4.0
 _MIN_DATED_ROWS = 5
+# Desfase máximo entre una fecha y su actividad cuando las columnas no están alineadas.
+_OFFSET_TOLERANCE = 12.0
 
 
 class PyMuPDFExtractorAdapter(DocumentTextExtractorPort):
@@ -56,14 +58,57 @@ class PyMuPDFExtractorAdapter(DocumentTextExtractorPort):
         return ExtractedDocument(pages=pages_text, title=title.strip() if title else None)
 
     def _page_text(self, page: Any) -> str:
-        rows = self._layout_rows(page)
+        positioned_rows = self._positioned_rows(page)
+        rows = [cells for _, cells in positioned_rows]
         if self._is_dated_table(rows):
-            return self._render_dated_table(rows)
+            return self._render_dated_table(self._pair_offset_dates(positioned_rows))
+        # Página de calendario con la columna de fechas desalineada: se reconoce después
+        # de emparejar fechas y actividades, y solo si tiene encabezados de mes.
+        paired = self._pair_offset_dates(positioned_rows)
+        has_month = any(
+            len(cells) == 1 and _MONTH_HEADING.match(unicodedata.normalize("NFKC", cells[0][1].lower()).strip())
+            for cells in rows
+        )
+        if has_month and self._is_dated_table(paired):
+            return self._render_dated_table(paired)
         return str(page.get_text())
 
     @staticmethod
+    def _pair_offset_dates(rows: list[tuple[float, list[tuple[float, str]]]]) -> list[list[tuple[float, str]]]:
+        """Une cada fecha suelta con la actividad más cercana en altura.
+
+        En algunas páginas la columna de fechas no está alineada con la de
+        actividades (la fecha queda unos puntos arriba o abajo): «17» y «Último día
+        para pagar la cuota de diciembre» caían en filas distintas y la fecha se
+        perdía o se pegaba a la actividad de al lado.
+        """
+        paired = [list(cells) for _, cells in rows]
+        heights = [y for y, _ in rows]
+        taken: set[int] = set()
+        for index, cells in enumerate(paired):
+            if len(cells) != 1 or not _DATE_CELL.match(cells[0][1]):
+                continue
+            candidates = [
+                other for other in (index - 1, index + 1)
+                if 0 <= other < len(paired) and other not in taken and paired[other]
+                and abs(heights[other] - heights[index]) <= _OFFSET_TOLERANCE
+                and not _DATE_CELL.match(paired[other][0][1]) and not _MONTH_HEADING.match(paired[other][0][1].lower())
+            ]
+            if not candidates:
+                continue
+            nearest = min(candidates, key=lambda other: abs(heights[other] - heights[index]))
+            paired[nearest] = [cells[0], *paired[nearest]]
+            paired[index] = []
+            taken.add(nearest)
+        return [cells for cells in paired if cells]
+
+    @staticmethod
     def _layout_rows(page: Any) -> list[list[tuple[float, str]]]:
-        """Líneas agrupadas por altura: cada fila es una lista de (x, texto)."""
+        return [cells for _, cells in PyMuPDFExtractorAdapter._positioned_rows(page)]
+
+    @staticmethod
+    def _positioned_rows(page: Any) -> list[tuple[float, list[tuple[float, str]]]]:
+        """Líneas agrupadas por altura: (altura, [(x, texto)])."""
         positioned: list[tuple[float, float, str]] = []
         for block in page.get_text("dict").get("blocks", []):
             for line in block.get("lines", []):
@@ -79,7 +124,7 @@ class PyMuPDFExtractorAdapter(DocumentTextExtractorPort):
                 rows[-1][1].append((x, text))
             else:
                 rows.append((y, [(x, text)]))
-        return [sorted(cells) for _, cells in rows]
+        return [(y, sorted(cells)) for y, cells in rows]
 
     @staticmethod
     def _is_dated_table(rows: list[list[tuple[float, str]]]) -> bool:

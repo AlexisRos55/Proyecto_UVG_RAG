@@ -23,8 +23,9 @@ El proyecto fue diseñado en fases (documentación de arquitectura → implement
 | Panel administrativo de documentos | Implementado (subir / listar / eliminar / reindexar), sin rediseño visual todavía |
 | Infraestructura Docker Compose | Implementado y verificado (`docker compose up --build` levanta los 3 servicios) |
 | Evaluación con RAGAS | Script implementado; pendiente de ejecutarse con una `ANTHROPIC_API_KEY` real para obtener métricas |
+| Capa conversacional (memoria, seguimiento, comprensión antes del modelo) | Implementado y validado offline con bancos, simulador y miles de conversaciones sintéticas (ver `docs/13` a `docs/17` y `scripts/README.md`); pendiente de validación en vivo con la API |
 
-Cobertura de pruebas automatizadas del backend: **54 pruebas** (unitarias, de integración contra PostgreSQL/ChromaDB reales, y end-to-end contra la API real) — ver `backend/tests/`.
+Cobertura de pruebas automatizadas del backend: **432 pruebas** (404 unitarias, más integración contra PostgreSQL/ChromaDB reales y end-to-end contra la API) — ver `backend/tests/`. Frontend: 58 pruebas (Vitest).
 
 > **Nota honesta:** el corpus de documentos que se incluye en este repositorio (`backend/documents/`) es un **corpus de ejemplo ficticio** (reglamento, becas y seguro estudiantil de muestra), no los documentos oficiales reales de UVG Altiplano. El sistema fue validado también con documentos reales cargados manualmente vía el panel administrativo durante el desarrollo, pero esos archivos no se distribuyen en este repositorio. Para una demostración con contenido real, cárgalos desde `/admin` una vez el sistema esté corriendo.
 
@@ -157,6 +158,12 @@ Todas las decisiones técnicas relevantes están documentadas como **ADR** (Arch
 | [docs/09-risk-register.md](docs/09-risk-register.md) | Registro de riesgos técnicos y de proyecto |
 | [docs/10-addendum-tecnico-implementacion.md](docs/10-addendum-tecnico-implementacion.md) | Addendum Técnico de Implementación (ATI) — reconcilia el Protocolo de Investigación con las decisiones técnicas reales, sin modificarlo (borrador de diseño; redacción final pendiente de congelamiento total del proyecto) |
 | [docs/11-reproducibility.md](docs/11-reproducibility.md) | Matriz oficial de parámetros experimentales congelados y guía de instalación reproducible exacta |
+| [docs/12-fase9-evolucion-motor-rag.md](docs/12-fase9-evolucion-motor-rag.md) | Fase 9: recuperación híbrida, ingesta estructural y benchmark de recuperación |
+| [docs/13-capa-inteligencia-recuperacion.md](docs/13-capa-inteligencia-recuperacion.md) | Capa de inteligencia de recuperación: estado conversacional y resolución de referencias |
+| [docs/14-experiencia-conversacional.md](docs/14-experiencia-conversacional.md) | Fase 9.2: experiencia conversacional y simulador de conversaciones |
+| [docs/15-humanizacion-del-asistente.md](docs/15-humanizacion-del-asistente.md) | Fase 10: humanización del asistente |
+| [docs/16-excelencia-en-la-respuesta.md](docs/16-excelencia-en-la-respuesta.md) | Fase 10.1: excelencia en la respuesta (pruebas en vivo y auditoría de estilo) |
+| [docs/17-asesor-antes-del-modelo.md](docs/17-asesor-antes-del-modelo.md) | Fase 9.5 y fase final: comprensión de asesor, perfiles, hilos largos y rendimiento (validado offline) |
 | [docs/adr/](docs/adr/) | Architecture Decision Records — cada decisión con alternativas, ventajas, desventajas y trade-offs |
 | [docs/source/](docs/source/) | Especificación funcional original del asesor y Protocolo de Investigación |
 

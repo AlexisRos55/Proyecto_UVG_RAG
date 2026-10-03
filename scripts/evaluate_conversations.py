@@ -11,6 +11,7 @@ Por turno se comprueba:
     query_terms           la consulta interna contiene estos términos: la referencia
                           («esa», «¿cuánto cubre?») se resolvió al tema correcto
     forbidden_query_terms la consulta NO arrastra un tema anterior tras un cambio de tema
+    clean_query           la consulta interna no repite palabras (sin contar las expansiones)
     answer_contains       la respuesta (local o de navegación) menciona lo esperado
     abstain               no se admitió evidencia y el modelo no fue invocado
     grounded_path         el turno llegó a la respuesta fundamentada (no fue desviado)
@@ -68,6 +69,11 @@ from app.shared.kernel.clock import utc_now
 from app.shared.kernel.ids import new_id
 
 DEFAULT_BENCHMARK = Path(__file__).parent / "conversation_benchmark.json"
+
+
+def _no_repeated_words(text: str) -> bool:
+    words = [w for w in _normalize(text).replace("?", " ").split() if len(w) >= 4]
+    return len(words) == len(set(words))
 
 
 def _normalize(text: str) -> str:
@@ -210,6 +216,10 @@ async def run(use_case, verification, spy, conversations: list[dict]) -> list[Tu
             if turn.get("query_terms"):
                 folded_query = fold(query)
                 result.checks["reference"] = all(fold(term) in folded_query for term in turn["query_terms"])
+            if turn.get("clean_query"):
+                # La consulta interna no repite palabras (cada búsqueda, sin sus expansiones).
+                texts = [part.split(" | ")[0] for part in spy.queries[queries_before:]]
+                result.checks["clean_query"] = all(_no_repeated_words(text) for text in texts)
             if turn.get("forbidden_query_terms"):
                 folded_query = fold(query)
                 result.checks["topic_switch"] = not any(fold(term) in folded_query for term in turn["forbidden_query_terms"])

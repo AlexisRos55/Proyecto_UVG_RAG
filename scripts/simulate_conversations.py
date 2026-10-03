@@ -24,7 +24,14 @@ Fase 10 (humanización) añade:
     no_entiendo          «no entiendo» vuelve a explicar el tema activo (o orienta si no lo hay)
     regreso_tema         «volviendo a las becas, …» busca en ese tema, no en el actual
     comparacion          tras comparar dos becas, «¿cuál me conviene?» sigue buscando ambas
-    referencia_categoria «esa beca de antes» vuelve a la beca nombrada turnos atrás
+    referencia_categoria «esa beca de antes» vuelve a una beca concreta nombrada turnos atrás
+
+Fase 10.1 (excelencia en la respuesta) añade:
+
+    erratas              «bcas», «kiero saver de las bcas» se buscan como «becas»
+    referencia_fria      «¿y eso?» al empezar la conversación se aclara sin llamar al modelo
+    resumen              «resúmelo» reformula con la misma evidencia (sin búsqueda nueva)
+    ordinal              «¿la segunda?» tras una lista elige una opción concreta de esa lista
 
 El modelo generativo se sustituye por un registrador (sin costo); lo que se
 evalúa es todo lo que el sistema decide antes y alrededor de esa llamada.
@@ -96,6 +103,11 @@ _RESUMES = ("Sigamos", "Continuemos", "¿En qué íbamos?", "Retomemos")
 _LATER = ("Continuemos mañana", "Luego seguimos", "Hablamos después, gracias")
 _OUT_OF_DOMAIN = ("¿Quién ganó el último mundial?", "¿Cuál es la capital de Francia?", "Escríbeme un poema")
 _SWITCHES = ("Ahora {x}", "Cambiando de tema, {x}", "Otra pregunta: {x}", "{X}")
+_TYPO_OPENERS = ("bcas", "kiero saver de las bcas", "becaz", "info de vecas porfa")
+_COLD_REFERENCES = ("¿Y eso?", "¿Cuál?", "¿La primera?", "¿Y la otra?")
+_SUMMARIES = ("¿Puedes resumir?", "Resúmelo", "En pocas palabras")
+_AVE_LIST = "Háblame de las becas AVE"
+_ORDINALS = ("¿La primera?", "¿Y la segunda?", "¿La tercera?")
 _LOST = ("estoy perdido", "No sé qué preguntar", "¿Por dónde empiezo?", "Estoy confundido, orientame")
 _CONFUSED = ("no entiendo", "No me quedó claro", "¿Me lo explicas más sencillo?", "No entendí nada")
 _COMPARE_OPEN = ("¿Qué diferencia hay entre la Beca Despega y la Beca Trasciende?", "Compara la Beca Despega con la Beca Trasciende")
@@ -126,6 +138,8 @@ def generate(rng: random.Random, count: int) -> list[list[Turn]]:
             turns.append(Turn(rng.choice(_GREETINGS), "greeting_first", None))
         if rng.random() < 0.15:
             turns.append(Turn(rng.choice(_LOST), "lost", None))
+        elif rng.random() < 0.15:
+            turns.append(Turn(rng.choice(_COLD_REFERENCES), "cold", None))
         previous: TopicSpec | None = None
         named_entity = False
         for topic in rng.sample(TOPICS, k=rng.randint(2, 4)):
@@ -137,6 +151,11 @@ def generate(rng: random.Random, count: int) -> list[list[Turn]]:
                 text = rng.choice(_SWITCHES).format(x=lowered, X=opener)
                 turns.append(Turn(text, "switch", topic, previous))
             pool = list(topic.follow_ups) + list(_GENERIC_FOLLOW_UPS)
+            if topic.key == "becas" and rng.random() < 0.4:
+                turns.append(Turn(rng.choice(_TYPO_OPENERS), "typo", topic))
+            if topic.key == "becas" and rng.random() < 0.4:
+                turns.append(Turn(_AVE_LIST, "ave_list", topic))
+                turns.append(Turn(rng.choice(_ORDINALS), "ordinal", topic))
             if topic.key == "becas" and rng.random() < 0.5:
                 turns.append(Turn(rng.choice(_COMPARE_OPEN), "compare_open", topic))
                 turns.append(Turn(rng.choice(_COMPARE_FOLLOW), "compare_follow", topic))
@@ -165,6 +184,8 @@ def generate(rng: random.Random, count: int) -> list[list[Turn]]:
                     turns.append(Turn(rng.choice(_CONFUSED), "confused", topic))
                 elif roll < 0.37:
                     turns.append(Turn(rng.choice(_LOST), "lost", topic))
+                elif roll < 0.42 and topic.covered:
+                    turns.append(Turn(rng.choice(_SUMMARIES), "summary", topic))
             if previous is not None and previous.covered and previous.key in _NAMES and rng.random() < 0.35:
                 # «Volviendo a las becas, ¿cuánto cubre?»: regreso explícito al tema anterior.
                 question = rng.choice(previous.follow_ups or _GENERIC_FOLLOW_UPS[:2])
@@ -225,7 +246,17 @@ async def main() -> None:
             history.append(f"«{turn.message}»")
             topic = turn.topic
 
-            if turn.kind == "lost":
+            if turn.kind == "typo":
+                record("erratas", "beca" in fold(query), detail)
+            elif turn.kind == "cold":
+                record("referencia_fria", not called and "?" in answer, detail)
+            elif turn.kind == "summary" and topic:
+                # Con la evidencia de la respuesta anterior no hay búsqueda; si la hubo, dentro del tema.
+                record("resumen", called and (not query or _has_anchor(query, topic)), detail)
+            elif turn.kind == "ordinal":
+                folded_query = fold(query)
+                record("ordinal", any(name in folded_query for name in ("trasciend", "despeg", "transform")), detail)
+            elif turn.kind == "lost":
                 record("orientacion", not called and len(answer) > 40, detail)
             elif turn.kind == "confused" and topic:
                 oriented = not called and ("paso a paso" in answer or "te ayudo" in answer)
@@ -236,7 +267,11 @@ async def main() -> None:
                 folded_query = fold(query)
                 record("comparacion", "despeg" in folded_query and "trasciend" in folded_query, detail)
             elif turn.kind == "category":
-                record("referencia_categoria", "despeg" in fold(query), detail)
+                # Vuelve a una beca concreta de las nombradas antes (la última que estuvo en
+                # foco, que puede ser la ganadora de una comparación), no al tema actual.
+                folded_query = fold(query)
+                concrete = any(name in folded_query for name in ("despeg", "trasciend"))
+                record("referencia_categoria", concrete and not (topic and topic.key != "becas" and _has_anchor(query, topic)), detail)
             elif turn.kind in ("courtesy", "greeting_first"):
                 record("cortesia", not called and bool(answer.strip()), detail)
             elif turn.kind == "out_of_domain":

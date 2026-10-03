@@ -71,16 +71,17 @@ _DIRECTIVES: dict[ResponseStyle, str] = {
     ),
     ResponseStyle.EXPLANATION: (
         "Explica en prosa clara: primero la idea central en una frase, después el cómo "
-        "y el porqué que establece la normativa."
+        "y el porqué que establece la normativa. No más de 150 palabras: lo esencial, no todo el articulado."
     ),
     ResponseStyle.SUMMARY: (
-        "Resume en un párrafo breve; si ayuda, añade hasta cinco viñetas con lo esencial. "
-        "Omite los detalles secundarios."
+        "Resume lo que le explicaste en tres a cinco viñetas cortas o en un párrafo de no más de 80 palabras: "
+        "solo lo que el estudiante necesita recordar. Sin introducción ni cierre. Si el estudiante pide un "
+        "número de puntos («en tres puntos»), da exactamente ese número."
     ),
     ResponseStyle.CONSEQUENCES: (
         "Explica qué consecuencia establece la normativa (sanción, penalización, pérdida "
-        "de un beneficio) y en qué condiciones se aplica. Si hay un plazo o condición "
-        "crítica, cierra con una línea que empiece por **Importante:**."
+        "de un beneficio) y en qué condiciones se aplica, de la más probable a la menos probable. "
+        "Sin línea de cierre que repita lo ya dicho."
     ),
     ResponseStyle.RECOMMENDATION: (
         "Recomienda como lo haría un asesor: tu primera frase nombra una opción concreta. Primero la opción "
@@ -100,8 +101,9 @@ _DIRECTIVES: dict[ResponseStyle, str] = {
     ResponseStyle.OVERVIEW: (
         "Da un panorama que oriente: abre con un resumen de una o dos frases que diga lo esencial para un "
         "estudiante del Campus Altiplano (qué opciones le aplican). Después, cada opción en una viñeta breve "
-        "con su rasgo principal (a quién va dirigida y qué ofrece): primero las que aplican a campus externos; "
-        "las de otros campus o modalidades, en un bloque final más breve. Como máximo ocho viñetas."
+        "con su rasgo principal (a quién va dirigida y qué ofrece), sin repetir lo dicho en el resumen: primero "
+        "las que aplican a campus externos; las de otros campus o modalidades, en un bloque final más breve. "
+        "Como máximo ocho viñetas de una o dos líneas."
     ),
     ResponseStyle.RANKING: (
         "Tu primera frase nombra una opción concreta: cuál es, según lo que la normativa permite comparar, "

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import re
 import time
+from collections import OrderedDict
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
+from datetime import timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -20,18 +24,25 @@ from app.domain.ports.intent_classifier_port import IntentClassifierPort
 from app.domain.ports.vector_store_port import VectorStorePort
 from app.domain.ports.verification_strategy_port import VerificationStrategyPort
 from app.domain.services import answer_planner, conversation_guide, response_policy
-from app.domain.services.conversation_lexicon import anchor_terms, detect_topics, topic_by_key
+from app.domain.services.conversation_lexicon import (
+    anchor_terms,
+    aspect_by_key,
+    detect_topics,
+    topic_by_key,
+)
 from app.domain.services.conversation_tracker import (
     ConversationTracker,
+    ReplayCheckpoint,
     focus_label,
     topic_of,
 )
 from app.domain.services.document_navigator import DocumentNavigator, NavigationAnswer
+from app.domain.services.document_outline_builder import CARD_SECTION
 from app.domain.services.entity_extractor import find_entities
-from app.domain.services.local_skill_catalog import LocalSkillCatalog
+from app.domain.services.local_skill_catalog import LocalSkillCatalog, salutation
 from app.domain.services.message_sanitizer import MessageSanitizer, SanitizedMessage
 from app.domain.services.query_analyzer import QueryAnalysis, QueryAnalyzer
-from app.domain.services.spanish_text import fold
+from app.domain.services.spanish_text import analyze, fold
 from app.domain.services.voice_guard import enforce_institutional_voice, lead_with_what_applies
 from app.domain.value_objects.conversation_context import ConversationContext
 from app.domain.value_objects.conversation_intent import ConversationIntent, IntentClassification
@@ -72,10 +83,6 @@ NOT_GROUNDED_MESSAGE = (
     "confirmarlo directamente con la oficina que lleva el tema en el campus."
 )
 
-# Se conserva el nombre anterior: `scripts/evaluate.py` y las pruebas existentes
-# lo importan, y ADR-0011 exige que las adiciones sean aditivas.
-NO_INFORMATION_MESSAGE = NO_RETRIEVAL_MESSAGE
-
 GENERATION_FAILED_MESSAGE = (
     "No pude completar la respuesta en este momento.\n\n"
     "Intenta de nuevo en unos segundos. Si vuelve a ocurrir, prueba con una pregunta más "
@@ -109,6 +116,52 @@ _CONFIDENCE_CAVEATS = {
 # Cuánto de la respuesta anterior acompaña a un seguimiento: lo justo para que el
 # modelo no repita lo ya dicho y entienda a qué se refiere un pronombre.
 _THREAD_EXCERPT_CHARS = 320
+_MAX_CAREER_BROCHURES = 12
+# Los folletos de carreras se clasifican como programa o como documento general.
+_BROCHURE_KINDS = frozenset({DocumentKind.PROGRAM, DocumentKind.GENERAL})
+# Para reformular («no entendí», «resúmelo») el modelo necesita ver lo que dijo.
+_REFORMULATION_EXCERPT_CHARS = 1400
+
+_RELATIVE_DATE = re.compile(r"\b(?:cuando|fechas?|proxim\w*|siguiente\s+fecha|hoy|este\s+mes|esta\s+semana|cuanto\s+falta|ya\s+paso|todavia)\b")
+_MONTHS = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
+           "noviembre", "diciembre")
+
+
+# Menciones medias del tema por fragmento a partir de las cuales un documento lo regula
+# (medido en el corpus: crédito educativo ≈ 4.2; graduación ≈ 1.5 y retiro ≈ 1.2, de paso).
+_TREATED_MENTIONS = 2.5
+# Conversaciones activas cuyo estado se recuerda entre turnos (el resto se reconstruye).
+_MAX_CHECKPOINTS = 512
+
+
+def _today_in_guatemala() -> str:
+    """La fecha local del campus (UTC−6, sin horario de verano)."""
+    today = (utc_now() - timedelta(hours=6)).date()
+    return f"{today.day} de {_MONTHS[today.month - 1]} de {today.year}"
+
+
+# Quién escribe cambia el trato, nunca el contenido.
+_MOOD_NOTES = {
+    "angustia": (
+        "Quien escribe está preocupado o angustiado: reconócelo en una sola frase breve y tranquila, sin dramatizar, "
+        "y ve directo a lo que la normativa establece y a qué puede hacer."
+    ),
+    "alegria": "Quien escribe comparte una buena noticia: felicítalo en pocas palabras y sigue con lo que necesita saber.",
+}
+_AUDIENCE_NOTES = {
+    "padre de familia": (
+        "Quien escribe es un padre, madre o encargado que pregunta por su hijo o hija: trátalo de usted y habla del "
+        "estudiante en tercera persona («su hijo», «el estudiante»)."
+    ),
+    "docente": (
+        "Quien escribe es docente de la universidad: trátalo de usted, habla de los estudiantes en tercera persona y "
+        "no le atribuyas un cargo (director, coordinador) que no mencionó."
+    ),
+    "personal administrativo": (
+        "Quien escribe es personal administrativo de la universidad: trátalo de usted, sé preciso y habla de los "
+        "estudiantes en tercera persona."
+    ),
+}
 
 _CHOICE_STYLES = frozenset({ResponseStyle.RANKING, ResponseStyle.RECOMMENDATION, ResponseStyle.COMPARISON})
 
@@ -126,6 +179,10 @@ class _TopicProfile:
     office: str | None = None
     # El tema solo aparece de paso en artículos de otro (sin documento ni capítulo propio).
     incidental: bool = False
+    # El documento principal tiene artículos (un reglamento), no solo secciones (un folleto).
+    structured: bool = True
+    # El calendario académico trata el tema (sus fechas se pueden ofrecer aunque sea de paso).
+    in_calendar: bool = False
 
 
 class AnswerStudentQueryUseCase:
@@ -185,6 +242,9 @@ class AnswerStudentQueryUseCase:
         # cubiertos: búsquedas locales, recalculadas solo si cambia el corpus.
         self._profiles: dict[tuple[str, int], _TopicProfile] = {}
         self._menu_cache: tuple[int, list[tuple[str, str]]] | None = None
+        # Punto de control del estado conversacional por conversación (con la huella del
+        # corpus con que se calculó): cada turno reproduce solo lo nuevo.
+        self._checkpoints: OrderedDict[UUID, tuple[int, ReplayCheckpoint]] = OrderedDict()
 
     async def execute(self, request: AnswerQueryRequest) -> AnswerQueryResponse:
         started_at = time.perf_counter()
@@ -217,26 +277,21 @@ class AnswerStudentQueryUseCase:
 
         # E2b · Capa de inteligencia de recuperación: estado de la conversación,
         # resolución de referencias y reescritura de la consulta, antes de buscar.
-        state, turn = self._understand_turn(sanitized, history)
+        state, turn = self._understand_turn(sanitized, history, conversation.id)
         plan = self._align_plan(plan, turn, sanitized)
 
-        if turn is not None and turn.needs_orientation:
-            # «Estoy perdido», «no sé qué preguntar»: caminos concretos, sin buscar.
-            focus = focus_label(state) if state.last_grounded else None
-            available = [a for a in await self._topic_aspects(state.topic) if a not in state.covered_aspects] if focus else []
-            text = conversation_guide.orientation(focus, available, await self._covered_menu())
-            return await self._persist_navigation(NavigationAnswer(text, is_grounded=None), conversation.id, started_at)
+        move = await self._conversation_move(plan, turn, state, sanitized, outlines, history)
+        if move is not None:
+            # Orientar, aclarar o retomar: lo resuelve la conversación, sin buscar ni llamar al modelo.
+            return await self._persist_navigation(NavigationAnswer(move, is_grounded=None), conversation.id, started_at)
 
-        if plan.skill is SkillName.RESUME_CONVERSATION and state.has_focus:
-            titles = {o.document_id: o.title for o in outlines}
-            fallback = next((f"el {titles[d]}" for d in state.documents if d in titles), "el tema anterior")
-            # «Sigamos con las becas» nombra el tema; se retoma con ese nombre,
-            # no con la beca concreta que estaba en foco.
-            named = next((t for t in detect_topics(fold(sanitized.safe_for_prompt)) if t.key == state.topic), None)
-            text = conversation_guide.resume(
-                (named.label if named else focus_label(state)) or fallback, state.covered_aspects, await self._topic_aspects(state.topic)
-            )
-            return await self._persist_navigation(NavigationAnswer(text, is_grounded=None), conversation.id, started_at)
+        if plan.skill is SkillName.DECLINE_OUT_OF_DOMAIN:
+            asked = detect_topics(fold(sanitized.safe_for_prompt))
+            if asked and (await self._topic_profile(asked[0].key)).document is not None:
+                # «¿Quién ganó la última elección?»: el tema sí es del dominio; el dato concreto no.
+                question = next((q for label, q in await self._covered_menu() if label == asked[0].label), None)
+                text = conversation_guide.not_a_record(asked[0].label, question)
+                return await self._persist_navigation(NavigationAnswer(text, is_grounded=None), conversation.id, started_at)
 
         # E3a · Habilidad local: se resuelve sin recuperación ni modelo.
         if plan.is_local:
@@ -260,8 +315,12 @@ class AnswerStudentQueryUseCase:
 
         query = plan.resolved_query or sanitized.safe_for_prompt
         conversation_documents = state.documents or context.topic_document_ids
-        analysis = self._enrich(QueryAnalyzer.analyze(query, outlines, conversation_documents), turn, state)
+        analysis = self._enrich(QueryAnalyzer.analyze(query, outlines, conversation_documents), turn, state, outlines)
 
+        if plan.skill.is_navigational and analysis.is_multi_part:
+            # «Háblame del calendario y además, ¿cuándo termina el ciclo?»: la ficha del
+            # documento no responde la segunda pregunta; se responden ambas con evidencia.
+            plan = replace(plan, skill=SkillName.GROUNDED_ANSWER, resolved_query=query)
         # E3b · Navegación documental: preguntas sobre los documentos como tales.
         if plan.skill.is_navigational and self._catalog is not None:
             answer = await self._navigate(plan, analysis, outlines, context)
@@ -275,12 +334,61 @@ class AnswerStudentQueryUseCase:
             reading = self._article_reading(turn, analysis, outlines) or turn.reading
             if turn.depends_on_context and reading:
                 question = f"{question}\n\n({reading})"
+            if turn.audience in _AUDIENCE_NOTES:
+                question = f"{question}\n\n({_AUDIENCE_NOTES[turn.audience]})"
+            if turn.mood in _MOOD_NOTES:
+                question = f"{question}\n\n({_MOOD_NOTES[turn.mood]})"
+            if turn.aspect == "plazo" or _RELATIVE_DATE.search(fold(sanitized.safe_for_prompt)):
+                # «¿Cuándo es la próxima fecha de pago?» solo tiene respuesta si se sabe qué día es hoy.
+                question = f"{question}\n\n(Fecha de hoy: {_today_in_guatemala()}.)"
             thread = self._thread(turn, history)
             if thread:
                 question = f"{question}\n\n{thread}"
         return await self._answer_grounded(
-            plan, analysis, question, context, conversation.id, started_at, turn, state, outlines
+            plan, analysis, question, context, conversation.id, started_at, turn, state, outlines, history
         )
+
+    async def _conversation_move(
+        self,
+        plan: ResponsePlan,
+        turn: TurnInterpretation | None,
+        state: ConversationState,
+        sanitized: SanitizedMessage,
+        outlines: Sequence[DocumentOutline],
+        history: Sequence[Message],
+    ) -> str | None:
+        """Lo que un asesor resuelve sin consultar nada: orientar, preguntar o retomar el hilo."""
+        if turn is not None and turn.needs_orientation:
+            # «Estoy perdido», «no sé qué preguntar»: caminos concretos, sin buscar.
+            focus = focus_label(state) if state.last_grounded else None
+            available = [a for a in await self._topic_aspects(state.topic) if a not in state.covered_aspects] if focus else []
+            newcomer = turn.resolution == "estudiante nuevo desorientado"
+            last = next((m.content for m in reversed(history) if m.role is MessageRole.ASSISTANT), "")
+            if conversation_guide.is_orientation(last):
+                # Pedir orientación otra vez: ya no se repite la lista, se recomienda por dónde empezar.
+                welcomed = newcomer or "Te doy la bienvenida" in last
+                return conversation_guide.recommend_first(focus, available, await self._covered_menu(), welcomed)
+            return conversation_guide.orientation(focus, available, await self._covered_menu(), turn.mood, newcomer)
+        titles = {o.document_id: o.title for o in outlines}
+        if turn is not None and turn.needs_clarification:
+            # «¿Y eso?» sin nada antes, «¿ese artículo?» sin número: un asesor pregunta.
+            document = next((titles[d] for d in state.documents if d in titles), None)
+            text = conversation_guide.clarify(turn.resolution, document, await self._covered_menu())
+            hello = salutation(sanitized.original)
+            if turn.resolution.startswith("presentación") and hello != "Hola":
+                text = f"{hello}. {text}"  # «Buenas tardes, soy papá…» → «Buenas tardes. Con gusto le ayudo…»
+            last = next((m.content for m in reversed(history) if m.role is MessageRole.ASSISTANT), "")
+            # Una persona no repite la misma pregunta palabra por palabra.
+            return conversation_guide.ask_again(text) if text == last else text
+        if plan.skill is SkillName.RESUME_CONVERSATION and state.has_focus:
+            fallback = next((f"el {titles[d]}" for d in state.documents if d in titles), "el tema anterior")
+            # «Sigamos con las becas» nombra el tema; se retoma con ese nombre,
+            # no con la beca concreta que estaba en foco.
+            named = next((t for t in detect_topics(fold(sanitized.safe_for_prompt)) if t.key == state.topic), None)
+            return conversation_guide.resume(
+                (named.label if named else focus_label(state)) or fallback, state.covered_aspects, await self._topic_aspects(state.topic)
+            )
+        return None
 
     # --- Respuesta fundamentada (una llamada al modelo) -------------------------------
 
@@ -295,10 +403,21 @@ class AnswerStudentQueryUseCase:
         turn: TurnInterpretation | None = None,
         state: ConversationState | None = None,
         outlines: Sequence[DocumentOutline] = (),
+        history: Sequence[Message] = (),
     ) -> AnswerQueryResponse:
         state = state or ConversationState()
         retrieval_started_at = time.perf_counter()
-        ranked = self._exact_article(analysis, turn) or await self._retriever.retrieve(analysis)
+        ranked = self._exact_article(analysis, turn) or await self._previous_evidence(analysis, turn, history)
+        if turn is not None and not self._context_assembler.assemble(ranked, parts=len(analysis.sub_queries)):
+            # Sin contexto útil (nada recuperado, o nada que sobreviva al ensamblado).
+            ranked, analysis, turn = await self._fallback(analysis, turn, state, history, outlines)
+        if turn is not None and turn.topic == "carreras" and turn.is_overview and analysis.target_documents:
+            # Un panorama de carreras nombra todas: el mejor fragmento de cada folleto, no tres del mismo.
+            per_document = await asyncio.gather(*(
+                self._retriever.retrieve(replace(analysis, target_documents=(document,)))
+                for document in analysis.target_documents[:_MAX_CAREER_BROCHURES]
+            ))
+            ranked = [found[0] for found in per_document if found] or ranked
         passages = self._context_assembler.assemble(
             ranked, parts=len(analysis.sub_queries), scale=self._context_scale(turn)
         )
@@ -380,19 +499,15 @@ class AnswerStudentQueryUseCase:
         # matiz genérico duplicaría el aviso con menos precisión.
         caveat = "" if verified_answer.coverage is AnswerCoverage.PARTIAL else _CONFIDENCE_CAVEATS.get(confidence, "")
 
-        # Anticipación: al abrir un tema, ofrecer lo que la normativa también trata.
-        offer = ""
-        opens_topic = turn is not None and turn.topic and (turn.mode is TurnMode.NEW or turn.is_overview)
-        if opens_topic and not caveat and verified_answer.coverage is AnswerCoverage.COMPLETE and turn is not None and not turn.compared:
-            available = conversation_guide.not_in_answer(await self._topic_aspects(turn.topic), verified_answer.answer_text)
-            exclude = (turn.aspect or "", *state.covered_aspects)
-            if turn.is_overview:
-                offer = conversation_guide.overview_offer(available, exclude, self._has_options(turn.topic))
-            else:
-                offer = conversation_guide.offer_line(available, exclude)
+        offer = await self._closing_offer(turn, state, verified_answer, caveat, history)
         return await self._persist_and_build_response(
             conversation_id=conversation_id,
-            answer_text=conversation_guide.close_with_offer(self._voice(verified_answer.answer_text, style) + caveat, offer),
+            answer_text=conversation_guide.close_with_offer(
+                conversation_guide.drop_repeated_referral(
+                    self._voice(verified_answer.answer_text, style), self._previous_answer(history)
+                ) + caveat,
+                offer,
+            ),
             is_grounded=True,
             confidence=confidence,
             source_chunk_ids=tuple(dict.fromkeys(cid for passage in cited for cid in passage.origin_ids)),
@@ -401,6 +516,109 @@ class AnswerStudentQueryUseCase:
             retrieval_seconds=retrieval_seconds,
             generation_seconds=generation_seconds,
         )
+
+    async def _closing_offer(
+        self,
+        turn: TurnInterpretation | None,
+        state: ConversationState,
+        verified_answer: VerifiedAnswer,
+        caveat: str,
+        history: Sequence[Message],
+    ) -> str:
+        """Anticipación: al abrir un tema, ofrecer lo que la normativa también trata (y no se acaba de decir)."""
+        opens_topic = turn is not None and turn.topic and (turn.mode is TurnMode.NEW or turn.is_overview)
+        if (
+            not opens_topic or caveat or verified_answer.coverage is not AnswerCoverage.COMPLETE or turn is None
+            or turn.compared or turn.audience
+        ):
+            return ""
+        available = conversation_guide.not_in_answer(await self._topic_aspects(turn.topic), verified_answer.answer_text)
+        exclude = (turn.aspect or "", *state.covered_aspects)
+        if turn.is_overview:
+            offer = conversation_guide.overview_offer(available, exclude, self._has_options(turn.topic))
+        else:
+            offer = conversation_guide.offer_line(available, exclude)
+        # La misma invitación dos veces seguidas suena a formulario.
+        return "" if offer and self._previous_answer(history).rstrip().endswith(offer) else offer
+
+    async def _previous_evidence(
+        self, analysis: QueryAnalysis, turn: TurnInterpretation | None, history: Sequence[Message]
+    ) -> list[RetrievedChunk]:
+        """Reformular lo dicho se hace con la misma evidencia que lo sustentó.
+
+        «No entendí», «resúmelo», «dame un ejemplo», «¿por qué?»: una búsqueda nueva
+        con la consulta anterior puede traer otros artículos y la explicación
+        cambiaría de tema. «Continúa» parte de esa evidencia y suma la que falte.
+        """
+        if turn is not None and turn.document_reference and self._catalog is not None and analysis.target_documents:
+            # «¿Ese reglamento quién lo aprobó?»: la ficha del documento, y lo que se encuentre en él.
+            card = self._catalog.section_chunks(analysis.target_documents[0], f"sec:|{CARD_SECTION}")
+            found = await self._retriever.retrieve(analysis)
+            known = {c.id for c in card}
+            return [RetrievedChunk(chunk=c, score=SimilarityScore(1.0)) for c in card] + [
+                item for item in found if item.chunk.id not in known
+            ]
+        reuse = turn is not None and turn.mode is TurnMode.DEEPEN and self._catalog is not None
+        # «Exacto» → «Entendido.» no es la explicación: se reformula la última respuesta con fuentes.
+        previous = next(
+            (m for m in reversed(history) if m.role is MessageRole.ASSISTANT and (m.is_grounded is not None or m.sources)),
+            None,
+        )
+        if not reuse or previous is None or not previous.is_grounded or not previous.source_chunk_ids:
+            return await self._retriever.retrieve(analysis)
+        assert self._catalog is not None and turn is not None
+        same = [RetrievedChunk(chunk=c, score=SimilarityScore(1.0)) for c in self._catalog.chunks_by_ids(previous.source_chunk_ids)]
+        if not same:
+            return await self._retriever.retrieve(analysis)
+        if not turn.continues:
+            return same
+        known = {item.chunk.id for item in same}
+        return same + [item for item in await self._retriever.retrieve(analysis) if item.chunk.id not in known]
+
+    async def _fallback(
+        self,
+        analysis: QueryAnalysis,
+        turn: TurnInterpretation,
+        state: ConversationState,
+        history: Sequence[Message],
+        outlines: Sequence[DocumentOutline],
+    ) -> tuple[list[RetrievedChunk], QueryAnalysis, TurnInterpretation]:
+        """Segundo intento, sin llamar al modelo, antes de abstenerse.
+
+        - Pregunta nueva sin tema propio que no encontró nada, con un tema activo:
+          probablemente era un seguimiento («¿me devuelven el dinero?»).
+        - Seguimiento anclado a una entidad que no encontró nada: se ancla al tema
+          («¿quién decide?» sobre el Programa Regular lo responde el artículo del Comité).
+        """
+        if self._catalog is None:
+            return [], analysis, turn
+        if turn.mode is TurnMode.NEW and turn.topic is None and turn.entity is None and state.has_focus:
+            tracker = ConversationTracker(self._catalog.entities(), self._catalog.vocabulary, self._catalog.co_occur)
+            retry = tracker.as_follow_up(turn.message, state)
+            retried = self._enrich(
+                QueryAnalyzer.analyze(retry.retrieval_query, outlines, state.documents), retry, state, outlines
+            )
+            found = await self._retriever.retrieve(retried)
+            if found:
+                return found, retried, retry
+            # Como seguimiento tampoco: se amplía dentro del tema activo (abajo).
+            analysis, turn = retried, retry
+        topic = topic_by_key(turn.topic)
+        if topic is not None and turn.mode in (TurnMode.NEW, TurnMode.FOLLOW_UP):
+            # La pregunta, más lo que el aspecto y el tema dicen con palabras del reglamento,
+            # anclada al tema y no a la entidad: «quién decide» → «comité … ayudas financieras».
+            aspect = aspect_by_key(turn.aspect)
+            text = " ".join(part for part in (turn.retrieval_query, aspect.retrieval_terms if aspect else "", topic.retrieval_terms) if part)
+            broadened = replace(analysis, text=text, sub_queries=(text,), required_terms=anchor_terms(topic))
+            found = await self._retriever.retrieve(broadened)
+            if found:
+                return found, broadened, turn
+        return [], analysis, turn
+
+    @staticmethod
+    def _previous_answer(history: Sequence[Message]) -> str:
+        previous = next((m for m in reversed(history) if m.role is MessageRole.ASSISTANT), None)
+        return previous.content if previous is not None and previous.is_grounded else ""
 
     @staticmethod
     def _voice(text: str, style: ResponseStyle) -> str:
@@ -515,13 +733,23 @@ class AnswerStudentQueryUseCase:
     # --- Capa de inteligencia de recuperación -----------------------------------------
 
     def _understand_turn(
-        self, sanitized: SanitizedMessage, history: Sequence[Message]
+        self, sanitized: SanitizedMessage, history: Sequence[Message], conversation_id: UUID | None = None
     ) -> tuple[ConversationState, TurnInterpretation | None]:
         if not self._conversation_intelligence or self._intent_classifier is None:
             return ConversationState(), None
         assert self._catalog is not None
-        tracker = ConversationTracker(self._catalog.entities(), self._catalog.vocabulary, self._catalog.co_occur)
-        state = tracker.replay(history)
+        entities = self._catalog.entities()
+        tracker = ConversationTracker(entities, self._catalog.vocabulary, self._catalog.co_occur)
+        # La huella del corpus invalida el punto de control si se reindexa: la misma
+        # conversación podría interpretarse distinto con otras entidades.
+        corpus = hash(tuple(entity.key for entity in entities))
+        cached = self._checkpoints.get(conversation_id) if conversation_id else None
+        state, checkpoint = tracker.replay_from(history, cached[1] if cached and cached[0] == corpus else None)
+        if conversation_id is not None and checkpoint is not None:
+            self._checkpoints[conversation_id] = (corpus, checkpoint)
+            self._checkpoints.move_to_end(conversation_id)
+            while len(self._checkpoints) > _MAX_CHECKPOINTS:
+                self._checkpoints.popitem(last=False)
         turn = tracker.interpret(sanitized.safe_for_prompt, state)
         logger.info(
             "Turno '{}' ({}) → consulta interna: '{}'",
@@ -544,6 +772,23 @@ class AnswerStudentQueryUseCase:
             return plan
         if turn.mode is TurnMode.RESUME:
             return replace(plan, skill=SkillName.RESUME_CONVERSATION)
+        if turn.accepts_offer:
+            # «Sí» a «Si quieres, también puedo explicarte la cobertura»: el clasificador ve un
+            # acuse; la conversación dice que se aceptó explicar algo concreto.
+            return ResponsePlan(
+                skill=SkillName.GROUNDED_ANSWER,
+                intent=ConversationIntent.FOLLOW_UP,
+                style=ResponseStyle.UNSPECIFIED,
+                resolved_query=turn.retrieval_query,
+            )
+        if plan.skill is SkillName.DISAMBIGUATE and (turn.topic or turn.entity) and turn.aspect and not turn.is_overview:
+            # «requisitos beca»: dos palabras, pero con tema y aspecto ya es una pregunta completa.
+            return ResponsePlan(
+                skill=SkillName.GROUNDED_ANSWER,
+                intent=ConversationIntent.INSTITUTIONAL_QUERY,
+                style=response_policy.detect_style(sanitized.normalized),
+                resolved_query=turn.retrieval_query,
+            )
         if turn.is_overview and plan.skill in (SkillName.DISAMBIGUATE, SkillName.HANDLE_NOISE):
             # «Becas» a secas: un asesor da el panorama del tema, no un índice de apartados.
             return ResponsePlan(
@@ -552,7 +797,11 @@ class AnswerStudentQueryUseCase:
                 style=ResponseStyle.OVERVIEW,
                 resolved_query=turn.retrieval_query,
             )
-        answerable = plan.skill in (SkillName.GROUNDED_ANSWER, SkillName.DISAMBIGUATE, SkillName.HANDLE_NOISE)
+        # «Continúa» justo después de una respuesta: el clasificador lo lee como retomar,
+        # pero el rastreador sabe que no hubo pausa y que se pide seguir explicando.
+        answerable = plan.skill in (
+            SkillName.GROUNDED_ANSWER, SkillName.DISAMBIGUATE, SkillName.HANDLE_NOISE, SkillName.RESUME_CONVERSATION
+        )
         if turn.depends_on_context and answerable:
             style = plan.style
             if style is ResponseStyle.UNSPECIFIED:
@@ -572,7 +821,10 @@ class AnswerStudentQueryUseCase:
 
     @staticmethod
     def _enrich(
-        analysis: QueryAnalysis, turn: TurnInterpretation | None, state: ConversationState
+        analysis: QueryAnalysis,
+        turn: TurnInterpretation | None,
+        state: ConversationState,
+        outlines: Sequence[DocumentOutline] = (),
     ) -> QueryAnalysis:
         if turn is None:
             return analysis
@@ -580,8 +832,21 @@ class AnswerStudentQueryUseCase:
         # «Artículo 20» o «¿y el siguiente?» sin nombrar documento: el que se está consultando.
         bare_article = turn.article_numbers and turn.topic is None and turn.entity is None
         deepening_article = turn.mode is TurnMode.DEEPEN and turn.article_numbers
-        if (turn.mode is TurnMode.ARTICLE_STEP or bare_article or deepening_article) and not targets and state.documents:
+        if (
+            turn.mode is TurnMode.ARTICLE_STEP or bare_article or deepening_article or turn.document_reference
+            or turn.within_document
+        ) and not targets and state.documents:
             targets = state.documents[:1]
+        required = turn.required_terms
+        preferred = analysis.preferred_documents
+        if turn.aspect == "plazo":
+            # «¿Hasta cuándo…?»: las fechas viven en el calendario; se inclina hacia él, sin excluir.
+            preferred = tuple(dict.fromkeys((*preferred, *(o.document_id for o in outlines if o.kind is DocumentKind.CALENDAR))))
+        if turn.topic == "carreras" and not targets:
+            # «¿Qué carreras hay?»: lo responden los folletos de cada carrera, no los reglamentos.
+            programs = [o.document_id for o in outlines if o.kind in _BROCHURE_KINDS]
+            if programs:
+                targets, required = tuple(programs), ()
         return replace(
             analysis,
             expansions=tuple(dict.fromkeys((*analysis.expansions, *turn.expansions))),
@@ -589,7 +854,8 @@ class AnswerStudentQueryUseCase:
             target_documents=targets,
             focus_terms=turn.focus_terms,
             aspect_title_words=turn.aspect_title_words,
-            required_terms=turn.required_terms,
+            required_terms=required,
+            preferred_documents=preferred,
             defining_articles=turn.defining_articles,
             topic_terms=turn.topic_terms,
             # Una consulta reescrita no se vuelve a partir en subpreguntas; una
@@ -643,7 +909,13 @@ class AnswerStudentQueryUseCase:
         return focus_label(state) or next((f"el {titles[d]}" for d in state.documents if d in titles), None)
 
     async def _topic_aspects(self, topic_key: str | None) -> list[str]:
-        return (await self._topic_profile(topic_key)).aspects
+        """Lo que se puede ofrecer de un tema. Si la normativa solo lo menciona de paso
+        (la graduación en el reglamento de ayudas), sus artículos son de otro asunto:
+        se ofrecen solo las fechas, y solo si el calendario lo trata."""
+        profile = await self._topic_profile(topic_key)
+        if profile.incidental:
+            return ["plazo"] if profile.in_calendar else []
+        return profile.aspects
 
     async def _topic_profile(self, topic_key: str | None) -> _TopicProfile:
         """Lo que la normativa trata de un tema, dónde y quién lo lleva.
@@ -681,6 +953,9 @@ class AnswerStudentQueryUseCase:
                 continue
             whole = bool(topic.trigger.search(fold(outline.title)))
             chapters = [d for d in outline.divisions if whole or topic.trigger.search(fold(d.label))]
+            # Un artículo propio («Artículo 12. Horas Beca») también es tratar el tema, no mencionarlo de paso.
+            if any(a.title and topic.trigger.search(fold(a.title)) for d in outline.divisions for a in d.articles):
+                incidental = False
             if chapters:
                 incidental = False
                 titles += [a.title for d in chapters for a in d.articles if a.title]
@@ -688,14 +963,30 @@ class AnswerStudentQueryUseCase:
                 titles += [h.chunk.heading for h in hits if h.chunk.document_id == document_id and h.chunk.heading]
         documents = [h.chunk.document_id for h in hits]
         main = min(dict.fromkeys(documents), key=lambda d: (-documents.count(d), documents.index(d))) if documents else None
+        if incidental and main is not None:
+            # Sin artículo ni capítulo propio, un tema puede estar regulado igual: el crédito
+            # educativo es una columna de las tablas de cobertura, condiciones y penalizaciones.
+            # Lo distingue la insistencia: sus fragmentos lo nombran varias veces, no una de paso.
+            anchors = set(anchor_terms(topic))
+            counts = [sum(1 for stem in analyze(h.chunk.text) if stem in anchors) for h in hits if h.chunk.document_id == main]
+            incidental = sum(counts) / len(counts) < _TREATED_MENTIONS
         outline = self._catalog.get_outline(main) if main else None
         offices = [e for e in self._catalog.entities() if e.kind is EntityKind.OFFICE]
         mentions = [e for h in hits for e in find_entities(h.chunk.text, offices)]
         # La más nombrada; en empate, la que aparece primero (determinista entre ejecuciones).
         top = min(dict.fromkeys(mentions), key=lambda e: (-mentions.count(e), mentions.index(e))) if mentions else None
         office = top.spoken if top else None
+        # Las carreras se describen en folletos: los títulos de artículo que coinciden con
+        # «carrera» son de otros temas (becas por carrera) y darían ofertas equivocadas.
+        if topic.key == "carreras":
+            return _TopicProfile([], "folleto de cada carrera", None, False, structured=False)
+        aspects = conversation_guide.available_aspects(titles)
+        calendar_hits = await self._retriever.retrieve(replace(
+            probe, target_documents=tuple(o.document_id for o in self._catalog.list_outlines() if o.kind is DocumentKind.CALENDAR)
+        )) if incidental else []
         return _TopicProfile(
-            conversation_guide.available_aspects(titles), outline.title if outline else None, office, incidental and bool(hits)
+            aspects, outline.title if outline else None, office, incidental and bool(hits),
+            structured=bool(outline and outline.has_structure), in_calendar=bool(calendar_hits),
         )
 
     async def _covered_menu(self) -> list[tuple[str, str]]:
@@ -734,8 +1025,9 @@ class AnswerStudentQueryUseCase:
         if previous is None or asked is None or not previous.is_grounded:
             return None
         excerpt = " ".join(previous.content.split())
-        if len(excerpt) > _THREAD_EXCERPT_CHARS:
-            cut = excerpt[:_THREAD_EXCERPT_CHARS]
+        limit = _REFORMULATION_EXCERPT_CHARS if turn.mode is TurnMode.DEEPEN else _THREAD_EXCERPT_CHARS
+        if len(excerpt) > limit:
+            cut = excerpt[:limit]
             excerpt = cut[: cut.rfind(" ")] + "…"
         return (
             "HILO DE LA CONVERSACIÓN (no es fuente; úsalo solo para entender las referencias y no repetirte): "
@@ -755,13 +1047,19 @@ class AnswerStudentQueryUseCase:
         focus = self._turn_focus(turn)
         if turn is None or focus is None:
             menu = await self._covered_menu()
-            if default == NO_RETRIEVAL_MESSAGE and menu:
+            if menu:
                 # Sin tema reconocido: pedir otras palabras y abrir caminos concretos.
-                return conversation_guide.unmatched(menu, context.is_struggling)
+                return conversation_guide.unmatched(menu, context.is_struggling, retrieved=default != NO_RETRIEVAL_MESSAGE)
             return self._abstention_text(default, context)
         repeated = state.last_grounded is False and state.topic == turn.topic and turn.depends_on_context
         profile = await self._topic_profile(turn.topic)
         menu = [(label, question) for label, question in await self._covered_menu() if label != focus]
+        # Se cita la pregunta solo si es autónoma: «no responde a «¿y la otra?»» suena a máquina.
+        asked = (
+            turn.message.strip()
+            if turn.aspect is None and turn.message.strip().endswith("?") and not turn.depends_on_context
+            else None
+        )
         return conversation_guide.abstention(
             focus,
             turn.aspect,
@@ -774,6 +1072,8 @@ class AnswerStudentQueryUseCase:
             office=profile.office,
             alternatives=menu,
             incidental=profile.incidental,
+            structured=profile.structured,
+            asked=asked,
         )
 
     @staticmethod

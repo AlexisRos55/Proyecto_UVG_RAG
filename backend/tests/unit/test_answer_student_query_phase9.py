@@ -253,3 +253,38 @@ async def test_a_generation_failure_reaches_the_student_as_a_natural_message() -
     response = await _ask(use_case, "¿Cuánto cubre la beca de la colegiatura?")
     assert response.answer_text == GENERATION_FAILED_MESSAGE
     assert response.is_grounded is False and response.sources == ()
+
+
+@pytest.mark.asyncio
+async def test_no_entendi_reexplains_with_the_same_evidence_instead_of_searching_again() -> None:
+    # Fase 10.1: reformular («no entendí», «resúmelo») se hace con lo que sustentó la respuesta.
+    use_case, verification = await _build(
+        VerifiedAnswer(
+            answer_text="El Artículo 17 establece que la beca cubre hasta el 50%.",
+            is_grounded=True,
+            confidence=VerificationConfidence.HIGH,
+            cited_fragments=(1,),
+        )
+    )
+    user_id = new_id()
+    await _ask(use_case, "¿Cuánto cubre la beca de la colegiatura?", user_id)
+    first = {c.chunk.id for c in verification.received_contexts[-1][:1]}
+    await _ask(use_case, "No entendí", user_id)
+    assert {c.chunk.id for c in verification.received_contexts[-1]} == first
+    assert verification.received_style_directives[-1] == ResponseStyle.SIMPLER.directive
+
+
+@pytest.mark.asyncio
+async def test_date_questions_tell_the_model_what_day_it_is() -> None:
+    use_case, verification = await _build()
+    await _ask(use_case, "¿Hasta cuándo cubre la beca de la colegiatura?")
+    assert "Fecha de hoy:" in verification.received_questions[-1]
+
+
+@pytest.mark.asyncio
+async def test_a_two_word_question_with_topic_and_aspect_is_answered_not_indexed() -> None:
+    # «cobertura beca» (o «req beca» → «requisitos beca»): pregunta completa, no un índice de apartados.
+    use_case, verification = await _build()
+    response = await _ask(use_case, "cobertura beca")
+    assert len(verification.received_questions) == 1
+    assert "aparece en varios apartados" not in response.answer_text
