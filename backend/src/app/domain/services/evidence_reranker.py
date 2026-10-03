@@ -50,8 +50,8 @@ def structural_bonus(item: RetrievedChunk, analysis: QueryAnalysis, k: int) -> f
         title = fold(anchor.article_title)
         # «Penalizaciones» solo cuenta si el apartado es del tema preguntado: una
         # pregunta por sanciones electorales no debe premiar las de las becas.
-        on_topic = not analysis.topic_terms or bool(
-            set(analysis.topic_terms) & _stems(f"{item.chunk.heading}\n{item.chunk.text}")
+        on_topic = not analysis.topic_terms or _mentions(
+            analysis.topic_terms, _stems(f"{item.chunk.heading}\n{item.chunk.text}")
         )
         if on_topic and any(word in title for word in analysis.aspect_title_words):
             bonus += rank_bonus(k, 2)
@@ -62,8 +62,18 @@ def is_anchored(item: RetrievedChunk, analysis: QueryAnalysis) -> bool:
     """¿La evidencia habla del foco de la conversación? Siempre cierto si no hay foco."""
     if not analysis.required_terms:
         return True
-    stems = _stems(f"{item.chunk.heading}\n{item.chunk.text}")
-    return bool(set(analysis.required_terms) & stems)
+    return _mentions(analysis.required_terms, _stems(f"{item.chunk.heading}\n{item.chunk.text}"))
+
+
+def _mentions(terms: tuple[str, ...], stems: frozenset[str]) -> bool:
+    if set(terms) & stems:
+        return True
+    # «reelección» habla de elecciones: una raíz larga contenida en otra también ancla.
+    long_terms = [term for term in terms if len(term) >= _CONTAINED_MIN]
+    return any(term in stem for term in long_terms for stem in stems if len(stem) > len(term))
+
+
+_CONTAINED_MIN = 6
 
 
 @lru_cache(maxsize=4096)

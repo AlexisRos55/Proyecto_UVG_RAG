@@ -621,15 +621,19 @@
     },
     {
       "id": "p10-no-entiendo",
-      "description": "Fase 10: «no entiendo» con tema activo pide explicarlo de otra forma, sin perder el tema.",
+      "description": "Fase 10: «no entiendo» con tema activo vuelve a explicar con la misma evidencia (Fase 10.1: sin búsqueda nueva).",
       "turns": [
         {
           "message": "¿Cómo funcionan las elecciones estudiantiles?"
         },
         {
           "message": "no entiendo",
-          "query_terms": [
-            "eleccion"
+          "facts": [
+            [
+              "sistema electoral",
+              "consejo electoral",
+              "proceso electoral"
+            ]
           ]
         }
       ]

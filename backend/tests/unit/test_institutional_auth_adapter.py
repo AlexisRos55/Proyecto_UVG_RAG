@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import jwt
 import pytest
@@ -67,8 +67,8 @@ def test_decode_rejects_expired_token() -> None:
     expired_payload = {
         "sub": str(user.id),
         "role": user.role.value,
-        "iat": datetime.now() - timedelta(hours=2),
-        "exp": datetime.now() - timedelta(hours=1),
+        "iat": utc_now() - timedelta(hours=2),
+        "exp": utc_now() - timedelta(hours=1),
     }
     expired_token = jwt.encode(expired_payload, settings.session_secret, algorithm="HS256")
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from uuid import UUID
 
 from app.domain.entities.chunk import Chunk
@@ -61,3 +61,12 @@ class CorpusCatalogPort(ABC):
         Cuando el estudiante nombra el artículo («Artículo 20», «¿y el siguiente?»)
         no hay nada que buscar: se sabe exactamente qué texto pide.
         """
+
+    def chunks_by_ids(self, chunk_ids: Sequence[UUID]) -> list[Chunk]:
+        """Los fragmentos en que se apoyó una respuesta anterior, en el orden dado.
+
+        «No entendí», «resúmelo», «dame un ejemplo» piden reformular lo ya dicho:
+        se responde con la misma evidencia, no con una búsqueda nueva que podría
+        traer otro tema. Por defecto no hay ninguno (catálogos sin almacén).
+        """
+        return []

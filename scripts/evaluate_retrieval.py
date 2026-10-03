@@ -135,7 +135,7 @@ async def evaluate(config: str, settings: RagSettings, corpus: _Corpus, cases: l
             state = ConversationState()
             turn = tracker.interpret(case["question"], state)
             query = turn.retrieval_query or case["question"]
-            analysis = AnswerStudentQueryUseCase._enrich(QueryAnalyzer.analyze(query, outlines), turn, state)
+            analysis = AnswerStudentQueryUseCase._enrich(QueryAnalyzer.analyze(query, outlines), turn, state, outlines)
             scale = AnswerStudentQueryUseCase._context_scale(turn)
         ranked = await retriever.retrieve(analysis)
         context = assembler.assemble(ranked, parts=len(analysis.sub_queries), scale=scale)

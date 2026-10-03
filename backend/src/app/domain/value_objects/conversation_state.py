@@ -42,6 +42,15 @@ class ConversationState:
     last_message: str | None = None
     recent_entities: tuple[CorpusEntity, ...] = ()
     compared: tuple[CorpusEntity, ...] = ()
+    # La última lista de opciones que se le dio (para «la primera», «la otra»).
+    options: tuple[CorpusEntity, ...] = ()
+    # El último intercambio fue social o una pausa: «sigamos» retoma; si no, continúa.
+    paused: bool = False
+    # Quién escribe cuando no es un estudiante («padre de familia», «docente»…).
+    audience: str | None = None
+    # Aspectos que la última respuesta ofreció explicar, en orden («Si quieres, también
+    # puedo explicarte la cobertura o cómo se solicita»): para «sí», «no» y «la primera».
+    offered: tuple[tuple[str, str], ...] = ()
 
     @property
     def has_focus(self) -> bool:
@@ -88,6 +97,21 @@ class TurnInterpretation:
     # Entidades que se comparan en este turno; cada una se busca por separado.
     compared: tuple[CorpusEntity, ...] = ()
     sub_queries: tuple[str, ...] = ()
+    # Una referencia sin nada a qué referirse («¿y eso?» al empezar): se pregunta.
+    needs_clarification: bool = False
+    # «¿Puedes resumir?»: lo último dicho, en corto.
+    wants_summary: bool = False
+    # «Continúa»: seguir explicando lo mismo, con lo que faltó.
+    continues: bool = False
+    audience: str | None = None
+    # Cómo se siente quien escribe («angustia», «alegria»): cambia el tono, no la búsqueda.
+    mood: str | None = None
+    # «Ese reglamento»: la pregunta es sobre el documento en consulta.
+    document_reference: bool = False
+    # «¿Y allí qué dice de los requisitos?»: se busca dentro del documento en consulta.
+    within_document: bool = False
+    # «Sí» a un ofrecimiento concreto: se responde lo ofrecido aunque el mensaje sea un acuse.
+    accepts_offer: bool = False
     resolution: str = ""
     candidates: tuple[CorpusEntity, ...] = field(default_factory=tuple)
     # Raíces que la evidencia de un seguimiento debe contener (anclaje al tema).

@@ -29,6 +29,8 @@ def plan_style(
     if turn.mode is TurnMode.DEEPEN:
         if turn.simpler:
             return ResponseStyle.SIMPLER
+        if turn.wants_summary:
+            return ResponseStyle.SUMMARY
         return ResponseStyle.EXAMPLE if turn.wants_example else ResponseStyle.EXPLANATION
     if turn.is_overview and style in _OPEN_STYLES:
         return ResponseStyle.OVERVIEW

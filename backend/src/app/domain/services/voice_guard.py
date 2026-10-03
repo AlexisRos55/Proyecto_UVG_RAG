@@ -18,6 +18,8 @@ _REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\b(?:según|de\s+acuerdo\s+con)\s+(?:los|estos)\s+fragmentos\b", re.IGNORECASE), "según la normativa"),
     (re.compile(r"\b(?:según|de\s+acuerdo\s+con)\s+la\s+información\s+(?:disponible|proporcionada)\b", re.IGNORECASE), "según la normativa"),
     (re.compile(r"\blos\s+documentos\s+recuperados\b", re.IGNORECASE), "la normativa"),
+    # «El fragmento disponible menciona…» como sujeto de la oración.
+    (re.compile(r"\b(?:el|este|los|estos)\s+fragmentos?\s+(?:disponibles?|proporcionados?|recuperados?|entregados?)\b", re.IGNORECASE), "la normativa"),
     (re.compile(r"\s*\[\d{1,2}\](?!\()", re.IGNORECASE), ""),
 )
 

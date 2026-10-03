@@ -55,6 +55,7 @@ class InMemoryCorpusIndex(LexicalSearchPort, CorpusCatalogPort):
         # Estructuras derivadas; se reconstruyen de una vez cuando `_dirty`.
         self._order: list[Chunk] = []
         self._postings: dict[str, list[tuple[int, int]]] = {}
+        self._corrections: dict[str, str] = {}
         self._lengths: list[int] = []
         self._average_length = 1.0
         self._document_vectors: dict[UUID, dict[str, float]] = {}
@@ -118,6 +119,8 @@ class InMemoryCorpusIndex(LexicalSearchPort, CorpusCatalogPort):
                     surface_votes[light_stem(fold(lowered))][lowered] += 1
 
         self._postings = dict(postings)
+        # Las correcciones dependen del vocabulario: se recalculan al reconstruir el índice.
+        self._corrections = {}
         self._lengths = lengths
         self._average_length = (sum(lengths) / len(lengths)) if lengths else 1.0
         self._surface = {stem: votes.most_common(1)[0][0] for stem, votes in surface_votes.items()}
@@ -211,6 +214,14 @@ class InMemoryCorpusIndex(LexicalSearchPort, CorpusCatalogPort):
         """
         if term in self._postings or len(term) < 4 or term.isdigit():
             return term
+        # Memoizado: recorrer el vocabulario completo por cada término desconocido de cada
+        # consulta era el paso más caro de la búsqueda léxica.
+        cached = self._corrections.get(term)
+        if cached is None:
+            cached = self._corrections[term] = self._nearest(term)
+        return cached
+
+    def _nearest(self, term: str) -> str:
         budget = 1 if len(term) <= 6 else 2
         best: tuple[int, int, str] | None = None
         for candidate, postings in self._postings.items():
@@ -221,6 +232,14 @@ class InMemoryCorpusIndex(LexicalSearchPort, CorpusCatalogPort):
                 key = (distance, -len(postings), candidate)
                 if best is None or key < best:
                     best = key
+        if best is None and len(term) >= 5:
+            # Familia morfológica: el estudiante usa el verbo («reprobar» → «reprob») y el
+            # reglamento, el participio o el sustantivo («reprobados», «reprobación»). Solo
+            # para términos ausentes del corpus: lo que ya coincide no cambia.
+            family = [(-len(postings), candidate) for candidate, postings in self._postings.items()
+                      if candidate.startswith(term) and len(candidate) - len(term) <= 5]
+            if family:
+                return min(family)[1]
         return best[2] if best else term
 
     # --- CorpusCatalogPort ---------------------------------------------------------
@@ -262,6 +281,11 @@ class InMemoryCorpusIndex(LexicalSearchPort, CorpusCatalogPort):
                 for chunk in self._order
                 if chunk.document_id == document_id and chunk.anchor and chunk.anchor.covers_article(number)
             ]
+
+    def chunks_by_ids(self, chunk_ids: Sequence[UUID]) -> list[Chunk]:
+        self._ensure_fresh()
+        with self._lock:
+            return [self._chunks[cid] for cid in dict.fromkeys(chunk_ids) if cid in self._chunks]
 
     def entities(self) -> list[CorpusEntity]:
         self._ensure_fresh()

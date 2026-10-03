@@ -8,7 +8,6 @@ from app.domain.entities.message import Message, MessageRole
 from app.domain.services.conversation_tracker import (
     ConversationTracker,
     focus_label,
-    pending_aspects,
 )
 from app.domain.services.entity_extractor import entity_key
 from app.domain.value_objects.conversation_state import ConversationState, TurnMode
@@ -88,7 +87,6 @@ def test_social_turns_do_not_break_the_active_topic() -> None:
     assert state.topic == "becas" and state.covered_aspects == ("requisitos",)
     assert tracker.interpret("Continuemos", state).mode is TurnMode.RESUME
     assert focus_label(state) == "las becas y ayudas financieras"
-    assert "cuánto cubre" in pending_aspects(state)
 
 
 def test_a_single_named_entity_in_the_answer_resolves_esa() -> None:

@@ -14,7 +14,7 @@ def test_aspects_are_detected_from_article_titles() -> None:
 
 def test_the_offer_skips_what_was_already_asked_and_is_short() -> None:
     line = guide.offer_line(AVAILABLE, ("requisitos",))
-    assert line == "Si quieres, también puedo explicarte la cobertura, cómo se solicita o las condiciones para mantenerla."
+    assert line == "Si quieres, también puedo explicarte la cobertura, cómo se solicita o las condiciones que hay que cumplir."
 
 
 def test_the_system_offer_replaces_the_model_offer() -> None:

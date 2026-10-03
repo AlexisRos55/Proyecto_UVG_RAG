@@ -38,7 +38,7 @@ _NAVIGATION_WORDS = frozenset(
     for word in ["donde", "dónde", "habla", "hablan", "hablen", "trata", "tratan", "menciona", "mencionan", "aparece", "aparecen", "dice", "dicen", "regula", "regulan", "establece", "establecen", "explica", "consultar", "consulto", "consulte", "encontrar", "encuentro", "buscar", "articulo", "artículo", "articulos", "artículos", "capitulo", "capítulo", "capitulos", "capítulos", "seccion", "sección", "secciones", "apartado", "apartados", "parte", "partes", "pagina", "página", "paginas", "documento", "documentos", "reglamento", "reglamentos", "normativa", "normativas", "cuales", "cuáles", "cual", "cuál", "debo", "tengo", "puedo", "informacion", "información", "relacionados", "relacionado", "temas", "principales"]
 )
 _QUESTION_SPLIT = re.compile(
-    r"\?\s*(?:¿|\b)|(?<=[.;])\s+(?=¿)|\s+(?:y\s+adem[aá]s|adem[aá]s|y\s+tambi[eé]n)\s+"
+    r"\?\s*(?:¿|\b)|(?<=[.;])\s+(?=¿)|\s+(?:y\s+adem[aá]s|adem[aá]s|y\s+tambi[eé]n)[\s,]+"
     # «…de las elecciones y cuántos miembros…»: una «y» seguida de otra pregunta.
     # Admite una preposición intermedia: «…la beca y a qué hora son…».
     r"|\s+y\s+(?=(?:(?:a|en|de|con|para|por|desde|hasta)\s+)?"

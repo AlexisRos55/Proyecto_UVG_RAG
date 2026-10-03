@@ -47,3 +47,26 @@ def test_capabilities_and_greeting_only_offer_topics_the_corpus_covers() -> None
         ResponsePlan(skill=SkillName.INTRODUCE, intent=ConversationIntent.GREETING), ConversationContext(), domains=domains
     )
     assert "Asistente Inteligente" in greeting and "el calendario académico" in greeting
+
+
+def test_misaligned_calendar_dates_are_paired_with_their_activity() -> None:
+    from app.infrastructure.adapters.document_processing.pymupdf_extractor import (
+        PyMuPDFExtractorAdapter,
+    )
+
+    rows = [
+        (300.0, [(47.0, "DICIEMBRE")]),
+        (345.2, [(47.5, "8")]),
+        (351.0, [(138.2, "Prueba de admisión presencial")]),
+        (400.5, [(138.2, "Último día para pagar cuota de estudios de diciembre, sin recargo")]),
+        (409.7, [(47.5, "17")]),
+    ]
+    paired = PyMuPDFExtractorAdapter._pair_offset_dates(rows)
+    rendered = PyMuPDFExtractorAdapter._render_dated_table(paired)
+    assert "8 de diciembre: Prueba de admisión presencial" in rendered
+    assert "17 de diciembre: Último día para pagar cuota de estudios de diciembre, sin recargo" in rendered
+
+
+def test_fragment_vocabulary_as_a_subject_is_rewritten() -> None:
+    text = enforce_institutional_voice("El fragmento disponible menciona solo la Facultad de Educación.")
+    assert text.startswith("La normativa menciona solo la Facultad de Educación.")
