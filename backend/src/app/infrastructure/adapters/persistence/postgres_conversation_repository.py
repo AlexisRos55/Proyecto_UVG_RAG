@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.domain.entities.conversation import Conversation
 from app.domain.entities.message import Message, MessageRole
 from app.domain.ports.conversation_repository_port import ConversationRepositoryPort
+from app.domain.value_objects.source_reference import SourceReference
 from app.domain.value_objects.verified_answer import VerificationConfidence
 from app.infrastructure.adapters.persistence.orm_models import ConversationModel, MessageModel
 from app.shared.kernel.clock import utc_now
@@ -48,6 +49,7 @@ class PostgresConversationRepository(ConversationRepositoryPort):
             confidence=message.confidence.value if message.confidence else None,
             source_chunk_ids=list(message.source_chunk_ids),
             source_document_names=list(message.source_document_names),
+            sources=[source.to_record() for source in message.sources] or None,
         )
         self._session.add(model)
         await self._session.flush()
@@ -79,6 +81,7 @@ class PostgresConversationRepository(ConversationRepositoryPort):
                     confidence=VerificationConfidence(m.confidence) if m.confidence else None,
                     source_chunk_ids=tuple(m.source_chunk_ids),
                     source_document_names=tuple(m.source_document_names),
+                    sources=tuple(SourceReference.from_record(record) for record in m.sources or ()),
                 )
                 for m in model.messages
             ],

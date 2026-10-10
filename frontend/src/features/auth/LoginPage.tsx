@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { UserRound } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { Separator } from "@/components/ui/separator";
@@ -25,10 +26,11 @@ const MICROSOFT_SSO_NOTICE =
   "El acceso con Microsoft 365 aún no está habilitado. Ingresa con tu correo institucional y contraseña.";
 
 const GENERIC_LOGIN_ERROR = "No se pudo iniciar sesión. Inténtalo de nuevo en unos momentos.";
+const GUEST_ERROR = "No se pudo abrir la sesión de invitado. Inténtalo de nuevo en unos momentos.";
 
 /** Portal de acceso institucional: panel de marca (45%) + formulario centrado (55%). */
 export function LoginPage() {
-  const { login, sessionExpired } = useAuth();
+  const { login, loginAsGuest, sessionExpired } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [notice, setNotice] = useState<string | null>(null);
@@ -42,11 +44,19 @@ export function LoginPage() {
     onSuccess: () => navigate(redirectTo, { replace: true }),
   });
 
+  // Modo invitado (ADR-0019): sesión temporal para quien no tiene cuenta institucional.
+  const guestMutation = useMutation<void, unknown, void>({
+    mutationFn: () => loginAsGuest(),
+    onSuccess: () => navigate(redirectTo, { replace: true }),
+  });
+
   const errorMessage = mutation.isError
     ? mutation.error instanceof ApiError
       ? mutation.error.message
       : GENERIC_LOGIN_ERROR
-    : null;
+    : guestMutation.isError
+      ? GUEST_ERROR
+      : null;
 
   // Se explica por qué se pide iniciar sesión otra vez, en vez de devolver al
   // usuario a un formulario vacío sin motivo aparente.
@@ -66,7 +76,7 @@ export function LoginPage() {
               {!errorMessage && <FormAlert message={expiredNotice} tone="info" />}
 
               <LoginForm
-                isPending={mutation.isPending}
+                isPending={mutation.isPending || guestMutation.isPending}
                 isSuccess={mutation.isSuccess}
                 onSubmit={handleSubmit}
                 onForgotPassword={() => setNotice(PASSWORD_RESET_NOTICE)}
@@ -88,9 +98,19 @@ export function LoginPage() {
 
                 <FormAlert id={noticeId} message={notice} tone="info" />
 
+                <SocialLoginButton
+                  icon={<UserRound className="size-full" strokeWidth={1.75} />}
+                  label="Continuar como invitado"
+                  isPending={guestMutation.isPending}
+                  onClick={() => {
+                    setNotice(null);
+                    guestMutation.mutate();
+                  }}
+                />
+
                 <InfoPanel>
-                  Solo pueden ingresar usuarios autorizados por la Universidad del Valle de
-                  Guatemala.
+                  ¿No tienes cuenta institucional? Aspirantes, padres de familia y visitantes
+                  pueden continuar como invitado.
                 </InfoPanel>
               </div>
 

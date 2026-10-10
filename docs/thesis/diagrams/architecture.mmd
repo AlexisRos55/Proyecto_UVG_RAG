@@ -1,0 +1,106 @@
+%% Figura 4. Arquitectura hexagonal del prototipo.
+%% Fuente de verdad: backend/src/app (domain/ports, application, infrastructure/adapters,
+%% infrastructure/entrypoints) y scripts/. Se lee de arriba hacia abajo: cada capa usa a la
+%% siguiente. En la franja de puertos, cada columna es un puerto definido por el dominio y,
+%% justo debajo, el adaptador que lo implementa; debajo de este, el servicio externo al que
+%% accede. Las dependencias del código apuntan siempre hacia el dominio (ADR-0001).
+%% Diagrama de bloques (block-beta): mantiene las columnas alineadas, cosa que un
+%% diagrama de flujo de Mermaid no garantiza con nueve pares puerto/adaptador.
+%%{init: {"theme": "base", "themeCSS": "* { font-family: Arial, Helvetica, sans-serif !important; }", "block": {"padding": 4}, "themeVariables": {"edgeLabelBackground": "#ffffff", "fontFamily": "Arial, sans-serif", "fontSize": "15px", "lineColor": "#374151", "primaryTextColor": "#111827"}}}%%
+block-beta
+    columns 9
+
+
+    T_FE["FRONTEND (navegador de estudiantes, administradores e invitados) · React 19 + TypeScript · nginx&nbsp;&nbsp;"]:9
+    FE1["Inicio de sesión, registro<br/>y modo invitado"]:3
+    FE2["Chat, fuentes citadas<br/>e historial"]:3
+    FE3["Panel administrativo<br/>de documentos"]:3
+
+    T_IN["ADAPTADORES DE ENTRADA&nbsp;&nbsp;&nbsp;&nbsp;"]:9
+    API["API REST · FastAPI (puerto 8000)<br/>/auth · /chat · /admin/documents · /health<br/>validación del JWT y del rol"]:6
+    CLI["Scripts del investigador<br/>ingest.py · evaluate.py"]:3
+
+    T_APP["CAPA DE APLICACIÓN&nbsp;&nbsp;"]:9
+    UCA["Acceso<br/>RegisterStudent<br/>AuthenticateUser<br/>StartGuestSession"]:2
+    UCQ["Responder consulta<br/>AnswerStudentQuery<br/>UseCase"]:3
+    SVC["Servicios<br/>KnowledgeRetriever<br/>ContextAssembler"]:2
+    UCD["Gestión documental<br/>Ingest · Manage<br/>Reindex · Status"]:2
+
+    T_DOM["DOMINIO · sin dependencias de frameworks&nbsp;&nbsp;"]:9
+    ENT["Entidades<br/>User · Document · Chunk<br/>Conversation · Message"]:3
+    DSV["Servicios de dominio<br/>MessageSanitizer · ResponsePolicy<br/>ConversationTracker · QueryAnalyzer<br/>RankFusion · EvidenceReranker · VoiceGuard"]:4
+    VO["Objetos de valor<br/>VerifiedAnswer<br/>SourceReference<br/>ConversationState"]:2
+
+    T_PORT["PUERTOS · interfaces declaradas por el dominio&nbsp;&nbsp;"]:9
+    P1["Auth"]
+    P2["Repos.<br/>User · Conv.<br/>Document"]
+    P3["Intent<br/>Classifier"]
+    P4["Verifica-<br/>tion<br/>Strategy"]
+    P5["LLM"]
+    P6["Embedding"]
+    P7["Vector<br/>Store"]
+    P8["Lexical-<br/>Search ·<br/>Catalog"]
+    P9["Document<br/>Indexer ·<br/>Text Extr."]
+
+    T_OUT["ADAPTADORES DE SALIDA · cada uno implementa el puerto de su columna&nbsp;&nbsp;"]:9
+    A1["Institu-<br/>tionalAuth<br/>bcrypt, JWT"]
+    A2["Repos.<br/>PostgreSQL<br/>SQLAlchemy"]
+    A3["RuleBased<br/>Intent<br/>Classifier"]
+    A4["SingleCall<br/>Verifica-<br/>tion (CoVe)"]
+    A5["Anthropic<br/>LLM<br/>Adapter"]
+    A6["Sentence-<br/>Transfor-<br/>mers"]
+    A7["Chroma<br/>Vector-<br/>Store"]
+    A8["InMemory<br/>Corpus-<br/>Index (BM25)"]
+    A9["Indexing<br/>Pipeline<br/>(PyMuPDF)"]
+
+    T_EXT["SERVICIOS EXTERNOS Y ALMACENAMIENTO&nbsp;&nbsp;"]:9
+    space
+    PG[("PostgreSQL<br/>16")]
+    space:2
+    CLAUDE["API de<br/>Anthropic<br/>Claude<br/>Haiku 4.5"]
+    MINILM["all-MiniLM<br/>-L6-v2<br/>(local)"]
+    CHROMA[("ChromaDB<br/>embebido")]
+    space
+    PDF[/"PDF<br/>oficiales<br/>(15)"/]
+    REPORT[/"EVALUACIÓN (Fase V): evaluate.py → evaluation_report.json → analyze.py → resultados.md"/]:9
+
+    FE2 --> API
+    API --> UCQ
+    CLI --> UCD
+    UCQ --> DSV
+    P1 --- A1
+    P2 --- A2
+    P3 --- A3
+    P4 --- A4
+    P5 --- A5
+    P6 --- A6
+    P7 --- A7
+    P8 --- A8
+    P9 --- A9
+    A2 --> PG
+    A5 --> CLAUDE
+    A6 --> MINILM
+    A7 --> CHROMA
+    A9 --> PDF
+    A4 --> A5
+    A8 --> CHROMA
+
+    classDef title fill:#ffffff,stroke:#ffffff,color:#111827,font-weight:bold
+    classDef front fill:#eef6ff,stroke:#3b6ea8,color:#0f2a4a
+    classDef inbound fill:#ffffff,stroke:#374151,color:#111827
+    classDef app fill:#e8f3ec,stroke:#008c36,color:#0b3d1f
+    classDef domain fill:#d5e9dc,stroke:#004533,color:#06281d
+    classDef port fill:#004533,stroke:#004533,color:#ffffff
+    classDef outbound fill:#ffffff,stroke:#374151,color:#111827
+    classDef external fill:#fff7e6,stroke:#b7791f,color:#3d2a06
+    classDef artifact fill:#ffffff,stroke:#6b7280,color:#111827,stroke-dasharray:4 3
+
+    class T_FE,T_IN,T_APP,T_DOM,T_PORT,T_OUT,T_EXT title
+    class FE1,FE2,FE3 front
+    class API,CLI inbound
+    class UCA,UCQ,SVC,UCD app
+    class ENT,DSV,VO domain
+    class P1,P2,P3,P4,P5,P6,P7,P8,P9 port
+    class A1,A2,A3,A4,A5,A6,A7,A8,A9 outbound
+    class PG,CLAUDE,MINILM,CHROMA,PDF external
+    class REPORT artifact

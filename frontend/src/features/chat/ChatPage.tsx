@@ -12,6 +12,7 @@ import {
 import { ChatHeader } from "@/features/chat/components/chat-header";
 import { Composer } from "@/features/chat/components/composer";
 import { ConnectionNotice } from "@/features/chat/components/connection-notice";
+import { GuestNotice } from "@/features/chat/components/guest-notice";
 import { EmptyState } from "@/features/chat/components/empty-state";
 import { MessageThread } from "@/features/chat/components/message-thread";
 import { ScrollToBottom } from "@/features/chat/components/scroll-to-bottom";
@@ -44,7 +45,7 @@ function readClearedAt(userId: string | undefined): string | null {
 }
 
 export function ChatPage() {
-  const { session, logout, isAdmin } = useAuth();
+  const { session, logout, isAdmin, isGuest } = useAuth();
   const { data: conversations, isLoading, isError, error, refetch } = useChatHistory();
   const { data: healthStatus, isError: healthIsError } = useBackendStatus();
   const askQuestion = useAskQuestion();
@@ -141,7 +142,7 @@ export function ChatPage() {
       </a>
 
       <Sidebar
-        userEmail={session?.email ?? ""}
+        userLabel={isGuest ? "Invitado" : (session?.email ?? "")}
         isAdmin={isAdmin}
         conversations={sidebarConversations}
         activeConversationId={activeConversation?.id ?? null}
@@ -157,6 +158,7 @@ export function ChatPage() {
           title={conversationTitle}
           isOnline={!isOffline}
           onOpenSidebar={openSidebar}
+          isGuest={isGuest}
         />
 
         {/* El contenido pasa por debajo de la cabecera translúcida: de ahí el
@@ -198,6 +200,7 @@ export function ChatPage() {
             servidor estaba caído. Aquí está siempre visible y justo al lado del
             campo que explica por qué está deshabilitado. */}
         <ConnectionNotice isOffline={isOffline} />
+        {isGuest && <GuestNotice />}
 
         <Composer isSending={askQuestion.isPending} isOffline={isOffline} onSend={handleSend} />
       </main>

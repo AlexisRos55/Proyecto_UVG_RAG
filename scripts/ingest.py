@@ -22,12 +22,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.application.dto.document_dto import IngestDocumentRequest
 from app.application.use_cases.ingest_document import IngestDocumentUseCase
-from app.infrastructure.adapters.document_processing.chunking_service import (
-    FixedSizeChunkingService,
-)
-from app.infrastructure.adapters.document_processing.document_indexing_pipeline import (
-    DocumentIndexingPipeline,
-)
 from app.infrastructure.adapters.document_processing.pymupdf_extractor import (
     PyMuPDFExtractorAdapter,
 )
@@ -43,6 +37,7 @@ from app.infrastructure.config.settings import (
     get_database_settings,
     get_rag_settings,
 )
+from app.infrastructure.rag_factory import build_indexing_pipeline
 
 DEFAULT_CORPUS_DIR = Path(__file__).parent.parent / "backend" / "documents"
 
@@ -57,18 +52,16 @@ async def ingest_directory(directory: Path) -> None:
     session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
 
     rag_settings = get_rag_settings()
-    pipeline = DocumentIndexingPipeline(
-        text_extractor=PyMuPDFExtractorAdapter(),
-        embedding_port=SentenceTransformersEmbeddingAdapter(
-            model_name=rag_settings.embedding_model_name
-        ),
-        vector_store_port=ChromaVectorStoreAdapter(
+    # Mismo pipeline que producción (rag_factory). El backend en ejecución
+    # detecta el cambio de tamaño de la colección y recarga su índice léxico.
+    pipeline = build_indexing_pipeline(
+        PyMuPDFExtractorAdapter(),
+        SentenceTransformersEmbeddingAdapter(model_name=rag_settings.embedding_model_name),
+        ChromaVectorStoreAdapter(
             persist_directory=get_chroma_settings().chroma_persist_dir,
             collection_name=rag_settings.chroma_collection_name,
         ),
-        chunking_service=FixedSizeChunkingService(
-            chunk_size=rag_settings.chunk_size, overlap=rag_settings.chunk_overlap
-        ),
+        rag_settings,
     )
 
     async with session_factory() as session:

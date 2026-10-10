@@ -184,6 +184,8 @@ graph TD
 
 Estas mejoras fueron identificadas en el análisis inicial del proyecto como oportunidades válidas, pero deliberadamente no forman parte del MVP dado el presupuesto de tiempo (~21 horas, un desarrollador). Se documentan aquí para que el tribunal vea que fueron consideradas y descartadas por una razón explícita, no por desconocimiento:
 
+> **Actualización Fase 9 (2026-09-24):** la recuperación híbrida y el chunking consciente de estructura ya están implementados (ADR-0012), junto con un catálogo documental (ADR-0013) y citas por artículo y página (ADR-0014). Detalle y mediciones en `docs/12-fase9-evolucion-motor-rag.md`. Los puntos siguientes se conservan como registro histórico.
+
 - **Recuperación híbrida (BM25 + vectorial):** mejoraría el recall en consultas que citan artículos o números de reglamento exactos. Requiere mantener un índice adicional (p. ej. Whoosh o similar) en paralelo a ChromaDB.
 - **Reranking con cross-encoder:** reduciría ruido en el Top-K antes de enviarlo al LLM, mejorando la métrica de fidelidad de RAGAS a costa de latencia adicional.
 - **Chunking consciente de estructura legal/normativa:** dividir por artículo/inciso en vez de tamaño fijo, mejorando la coherencia semántica de cada fragmento.

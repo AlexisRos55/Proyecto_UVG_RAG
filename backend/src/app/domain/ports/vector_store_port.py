@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from uuid import UUID
 
 from app.domain.entities.chunk import Chunk, RetrievedChunk
@@ -16,8 +16,18 @@ class VectorStorePort(ABC):
         """Persist chunks (with their embeddings already set) into the vector store."""
 
     @abstractmethod
-    def search(self, query_embedding: EmbeddingVector, top_k: int) -> list[RetrievedChunk]:
-        """Return the `top_k` chunks most similar to `query_embedding`, ordered by descending similarity."""
+    def search(
+        self,
+        query_embedding: EmbeddingVector,
+        top_k: int,
+        document_ids: Collection[UUID] | None = None,
+    ) -> list[RetrievedChunk]:
+        """Return the `top_k` chunks most similar to `query_embedding`, ordered by descending similarity.
+
+        `document_ids`, when given, restricts the search to those documents (a
+        question that names «el reglamento de grupos estudiantiles» should not
+        be answered from a brochure). `None` means the whole corpus.
+        """
 
     @abstractmethod
     def delete_by_document_id(self, document_id: UUID) -> None:

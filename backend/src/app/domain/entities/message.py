@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
+from app.domain.value_objects.source_reference import SourceReference
 from app.domain.value_objects.verified_answer import VerificationConfidence
 
 
@@ -27,3 +28,5 @@ class Message:
     source_chunk_ids: tuple[UUID, ...] = field(default_factory=tuple)
     source_document_names: tuple[str, ...] = field(default_factory=tuple)
     """Distinct filenames of the documents behind source_chunk_ids (explainability, sprint 1 demo)."""
+    sources: tuple[SourceReference, ...] = field(default_factory=tuple)
+    """Precise citations (document, article, pages) since ADR-0014; empty for older messages."""

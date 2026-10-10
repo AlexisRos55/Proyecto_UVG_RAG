@@ -50,4 +50,7 @@ def test_seeded_corpus_is_indexed_and_cited_as_a_source(client, admin_token: str
     assert body["is_grounded"] is True
     assert len(body["sources"]) >= 1
     assert body["sources"][0]["document_name"] in KNOWN_DEMO_DOCUMENTS
-    assert body["sources"][0]["page_number"] is None
+    # ADR-0011 dejó la página modelada pero siempre nula; desde ADR-0012/0014 la
+    # ingesta la registra, junto con el artículo citado (el corpus de ejemplo es de una página).
+    assert body["sources"][0]["page_number"] == 1
+    assert body["sources"][0]["document_title"]

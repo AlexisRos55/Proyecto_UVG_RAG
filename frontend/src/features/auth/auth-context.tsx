@@ -14,7 +14,8 @@ import type { AuthResponse, UserRole } from "@/shared/types/api";
 
 interface Session {
   userId: string;
-  email: string;
+  /** Nulo en una sesión de invitado. */
+  email: string | null;
   role: UserRole;
   token: string;
 }
@@ -34,11 +35,16 @@ interface AuthContextValue {
   session: Session | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  /** Visitante sin cuenta institucional (aspirante, padre de familia…): conversa, pero no
+   *  accede a funciones internas. El servidor aplica las restricciones; esto solo adapta la UI. */
+  isGuest: boolean;
   /** Cierta cuando la sesión terminó por rechazo del servidor y no por decisión
    *  del usuario. Permite explicar por qué se pide iniciar sesión de nuevo. */
   sessionExpired: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  /** Sesión temporal de invitado: sin correo ni contraseña. */
+  loginAsGuest: () => Promise<void>;
   logout: () => void;
 }
 
@@ -141,6 +147,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [persistSession],
   );
 
+  const loginAsGuest = useCallback(async () => {
+    const response = await apiClient.post<AuthResponse>("/auth/guest");
+    // Temporal por diseño: vive mientras dure la pestaña, no se recuerda entre visitas.
+    persistSession(sessionFromResponse(response), false);
+  }, [persistSession]);
+
   const logout = useCallback(() => {
     setSession(null);
     setSessionExpired(false);
@@ -152,12 +164,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isAuthenticated: session !== null,
       isAdmin: session?.role === "admin",
+      isGuest: session?.role === "guest",
       sessionExpired,
       login,
       register,
+      loginAsGuest,
       logout,
     }),
-    [session, sessionExpired, login, register, logout],
+    [session, sessionExpired, login, register, loginAsGuest, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

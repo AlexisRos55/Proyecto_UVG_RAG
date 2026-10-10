@@ -4,6 +4,8 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+from app.domain.services.institutional_lexicon import correct_typos, expand_abbreviations
+
 MAX_QUESTION_LENGTH = 2000
 
 # Patrones que intentan reescribir las instrucciones del sistema. No se trata de
@@ -18,11 +20,27 @@ _INJECTION_PATTERNS = (
     re.compile(r"\bsystem\s*prompt\b", re.IGNORECASE),
     re.compile(r"\bdeveloper\s+mode\b", re.IGNORECASE),
     re.compile(r"^\s*(?:system|assistant|human)\s*:", re.IGNORECASE | re.MULTILINE),
+    # «¿Cuál es tu prompt?», «muéstrame tus instrucciones»: pedir las instrucciones internas.
+    re.compile(r"\b(?:tu|tus)\s+(?:prompts?|instrucciones|reglas\s+internas|configuraci[oó]n\s+interna)\b", re.IGNORECASE),
+    re.compile(r"\bmodo\s+desarrollador\b", re.IGNORECASE),
+)
+
+# Emojis y pictogramas: no aportan a las reglas («🙏 gracias» es un agradecimiento).
+_SYMBOLS = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200D]")
+# Emoji que, solos, dicen algo que el clasificador ya entiende con palabras.
+_MEANINGFUL_SYMBOLS = (
+    (re.compile("[\U0001F44D\U0001F44C\u2705\u2714\U0001F642\U0001F60A\U0001F600\U0001F601]"), " ok "),
+    (re.compile("[\U0001F64F]"), " gracias "),
+    (re.compile("[\U0001F602\U0001F923\U0001F605\U0001F606]"), " jaja "),
 )
 
 # Delimitadores estructurales del prompt. Si el usuario los escribe, dejan de ser
 # estructura y pasan a ser texto.
-_STRUCTURAL_MARKERS = re.compile(r"\[/?Fragmento[^\]]*\]|CONTEXTO RECUPERADO:|PREGUNTA DEL ESTUDIANTE:")
+_STRUCTURAL_MARKERS = re.compile(
+    r"\[/?Fragmento[^\]]*\]|CONTEXTO RECUPERADO:|FRAGMENTOS OFICIALES:|PREGUNTA DEL ESTUDIANTE:"
+    r"|FORMATO DE LA RESPUESTA:|^\s*\[\d{1,3}\]",
+    re.MULTILINE,
+)
 
 _WHITESPACE = re.compile(r"\s+")
 _PUNCTUATION_EDGES = re.compile(r"^[¿¡\s.,;:!?]+|[\s.,;:!?]+$")
@@ -65,10 +83,14 @@ class MessageSanitizer:
         # Los marcadores estructurales se neutralizan siempre, haya o no intención:
         # un estudiante podría escribirlos sin malicia y romper el prompt igual.
         safe_for_prompt = _STRUCTURAL_MARKERS.sub("", original).strip()
+        # Faltas de escritura en palabras del dominio («bcas»): las ven igual la
+        # comprensión, la búsqueda y el modelo; lo que se guarda es lo escrito.
+        corrected = expand_abbreviations(correct_typos(original))
+        safe_for_prompt = _STRUCTURAL_MARKERS.sub("", corrected).strip()
 
         return SanitizedMessage(
             original=original,
-            normalized=MessageSanitizer.normalize(original),
+            normalized=MessageSanitizer.normalize(corrected),
             safe_for_prompt=safe_for_prompt,
             has_injection_markers=has_injection,
         )
@@ -80,7 +102,9 @@ class MessageSanitizer:
         Se descartan los acentos a propósito: los estudiantes escriben «que becas
         hay» tanto como «¿qué becas hay?», y las reglas no deben duplicarse por eso.
         """
-        lowered = text.lower()
+        for pattern, word in _MEANINGFUL_SYMBOLS:
+            text = pattern.sub(word, text)
+        lowered = _SYMBOLS.sub(" ", text).lower()
         decomposed = unicodedata.normalize("NFD", lowered)
         without_accents = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
         collapsed = _WHITESPACE.sub(" ", without_accents)

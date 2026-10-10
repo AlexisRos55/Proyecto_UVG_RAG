@@ -1,11 +1,12 @@
 // Tipos que reflejan los esquemas Pydantic del backend (contrato HTTP), no las entidades
 // de dominio internas — ver backend/src/app/infrastructure/entrypoints/api/schemas/.
 
-export type UserRole = "student" | "admin";
+// «guest»: visitante sin cuenta institucional (ADR-0019); su sesión no tiene correo.
+export type UserRole = "student" | "admin" | "guest";
 
 export interface AuthResponse {
   user_id: string;
-  email: string;
+  email: string | null;
   role: UserRole;
   session_token: string;
 }
@@ -15,6 +16,10 @@ export type VerificationConfidence = "high" | "medium" | "low";
 export interface SourceReference {
   document_name: string;
   page_number: number | null;
+  // Aditivos desde ADR-0014: ausentes en mensajes anteriores a la Fase 9.
+  document_title?: string | null;
+  section?: string | null;
+  page_end?: number | null;
 }
 
 export interface AnswerResponse {

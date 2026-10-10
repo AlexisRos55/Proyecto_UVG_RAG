@@ -10,7 +10,7 @@ también del lado del servidor (ver [ADR-0004](../../../../docs/adr/0004-institu
 | --- | --- |
 | `LoginPage.tsx` | Compone el portal: rejilla 45/55, mutación de acceso y mensajería de estado. |
 | `RegisterPage.tsx` | Alta de cuenta (alcance mínimo, ver `docs/08-roadmap.md`). |
-| `auth-context.tsx` | Sesión en memoria + persistencia. Expone `login(credentials)`. |
+| `auth-context.tsx` | Sesión en memoria + persistencia. Expone `login(credentials)` y `loginAsGuest()` (modo invitado, ADR-0019: sesión solo de pestaña, sin correo). |
 | `schemas.ts` | `loginSchema` y `credentialsSchema` (registro). |
 | `animations.ts` | Vocabulario de movimiento compartido (Framer Motion). |
 | `components/hero-section.tsx` | Panel institucional: fotografía, velo navy, capacidades del asistente. |
@@ -21,7 +21,7 @@ también del lado del servidor (ver [ADR-0004](../../../../docs/adr/0004-institu
 | `components/credentials-form.tsx` | Formulario de registro. Reutiliza los mismos campos. |
 | `components/input-field.tsx` | Campo de texto con icono, estados y cableado ARIA del error. |
 | `components/password-field.tsx` | `InputField` + alternancia mostrar/ocultar. |
-| `components/social-login-button.tsx` | Acceso federado (SSO). |
+| `components/social-login-button.tsx` | Botón secundario de acceso: federado (SSO) y «Continuar como invitado». |
 | `components/form-alert.tsx` | Mensaje a nivel de formulario (error del API o aviso). |
 | `components/field-error.tsx` | Mensaje de validación de un campo. |
 | `components/info-panel.tsx` | Aviso informativo de baja jerarquía. |

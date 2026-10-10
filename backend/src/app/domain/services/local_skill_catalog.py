@@ -1,23 +1,26 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
+from app.domain.services.spanish_text import fold
 from app.domain.value_objects.conversation_context import ConversationContext
 from app.domain.value_objects.conversation_intent import ConversationIntent
 from app.domain.value_objects.response_plan import ResponsePlan, SkillName
 
 ASSISTANT_NAME = "Asistente Inteligente de la Universidad del Valle de Guatemala"
 
+# Respaldo sin catálogo del corpus. Con catálogo, los temas se derivan de lo que
+# los documentos realmente cubren: nunca se ofrece un tema sin respaldo.
 _DOMAINS = (
     "reglamentos estudiantiles",
     "becas y ayudas financieras",
-    "seguro estudiantil",
     "procesos de inscripción y admisión",
-    "requisitos académicos",
+    "el calendario académico",
 )
 
 
-def _join(items: Sequence[str]) -> str:
+def _join(items: Sequence[str], conjunction: str = "y") -> str:
     """Enumeración en prosa.
 
     Cuando algún elemento lleva su propia conjunción —«becas y ayudas
@@ -29,21 +32,43 @@ def _join(items: Sequence[str]) -> str:
     if len(items) <= 1:
         return "".join(items)
     head, last = ", ".join(items[:-1]), items[-1]
-    ambiguous = any(f" {conjunction} " in item for item in items for conjunction in ("y", "e"))
-    return f"{head}{',' if ambiguous else ''} y {last}"
+    # Solo confunde la misma conjunción: «becas y ayudas, …, o la admisión» se lee bien sin coma.
+    words = (conjunction, "e") if conjunction == "y" else (conjunction, "u")
+    ambiguous = any(f" {word} " in item for item in items for word in words)
+    return f"{head}{',' if ambiguous else ''} {conjunction} {last}"
 
 
-def _introduce(context: ConversationContext) -> str:
+_ASKS_IF_AI = re.compile(r"\b(?:ia|inteligencia\s+artificial|robot|bot|humano|persona\s+real|maquina|chatgpt)\b")
+_LATER_HINT = re.compile(r"\b(?:continuemos|seguimos|sigamos|retomamos|luego|despues|manana|mas\s+tarde|otro\s+dia)\b")
+_TIME_GREETING = re.compile(r"\b(buen(?:os)?\s+dias|buenas\s+tardes|buenas\s+noches)\b")
+_TIME_GREETING_TEXT = {"buenos dias": "Buenos días", "buen dia": "Buen día", "buenas tardes": "Buenas tardes",
+                       "buenas noches": "Buenas noches"}
+
+
+def salutation(original: str) -> str:
+    """Se responde el saludo que se recibió: a «buenos días», «buenos días»."""
+    match = _TIME_GREETING.search(fold(original))
+    return _TIME_GREETING_TEXT.get(match.group(1), "Hola") if match else "Hola"
+
+
+def _introduce(
+    context: ConversationContext, active_focus: str | None = None, domains: Sequence[str] = (), original: str = ""
+) -> str:
+    hello = salutation(original)
     if context.already_introduced:
-        return _pick(_GREETING_AGAIN, context)
-    # Un saludo es conversación, no una ficha de producto: se presenta en dos
-    # frases y deja que el estudiante pregunte. El detalle de lo que cubre está
-    # a una pregunta de distancia ("¿qué puedes hacer?") y no hace falta
-    # adelantarlo antes de que lo pida.
+        if active_focus:
+            # Continuidad: el saludo de vuelta recuerda el tema y ofrece retomarlo.
+            return f"{hello} de nuevo. ¿Seguimos con {active_focus} o necesitas otra cosa?" if hello == "Hola" else (
+                f"{hello}. ¿Seguimos con {active_focus} o necesitas otra cosa?"
+            )
+        return f"{hello}. ¿En qué te ayudo?" if hello != "Hola" else _pick(_GREETING_AGAIN, context)
+    # Un saludo es conversación, no una ficha de producto: se presenta en una
+    # frase y abre caminos concretos, como haría quien atiende en ventanilla.
+    topics = list(domains[:3]) or list(_DOMAINS[:3])
     return (
-        "Hola. Soy el Asistente Inteligente de UVG Altiplano y respondo con base en los "
-        "reglamentos oficiales de la universidad.\n\n"
-        "¿Qué necesitas consultar?"
+        f"{hello}, soy el Asistente Inteligente de UVG Altiplano. Puedo orientarte sobre "
+        f"{', '.join(topics)} y más, siempre con base en la normativa oficial de la universidad.\n\n"
+        "¿En qué te ayudo?"
     )
 
 
@@ -64,16 +89,17 @@ _SMALL_TALK = (
 )
 
 _ACK = (
-    "Perfecto. Si necesitas algo más, aquí sigo.",
+    "Perfecto. Aquí sigo para lo que haga falta.",
     "De acuerdo.",
-    "Entendido. Cualquier otra duda, dime.",
+    "Entendido.",
 )
 
+# Sin tuteo ni ustedeo: el mismo agradecimiento sirve al estudiante y a un padre de familia.
 _THANKS = (
-    "Con gusto. Si te surge cualquier otra duda, aquí estoy.",
-    "Para eso estoy. Pregunta cuando lo necesites.",
-    "De nada. Si más adelante quieres revisar otro reglamento o beneficio, solo dime.",
-    "Un gusto ayudarte.",
+    "Con gusto. Si surge cualquier otra duda, aquí estoy.",
+    "Para eso estoy.",
+    "De nada. Aquí sigo para lo que haga falta.",
+    "Un gusto ayudar.",
 )
 
 
@@ -107,8 +133,8 @@ def _declare_identity() -> str:
     )
 
 
-def _declare_capabilities() -> str:
-    bullets = "\n".join(f"- {domain.capitalize()}" for domain in _DOMAINS)
+def _declare_capabilities(domains: Sequence[str] = ()) -> str:
+    bullets = "\n".join(f"- {domain[0].upper()}{domain[1:]}" for domain in (domains or _DOMAINS))
     return (
         "Puedo ayudarte con:\n\n"
         f"{bullets}\n\n"
@@ -155,8 +181,8 @@ def _explain_how_it_works() -> str:
 
 def _explain_usage(context: ConversationContext) -> str:
     base = (
-        "Entre más concreta sea tu pregunta, mejor puedo buscar. Por ejemplo, en lugar de "
-        "«becas», prueba con «¿qué requisitos tiene la beca de excelencia académica?».\n\n"
+        "Pregúntame como le preguntarías a alguien de la universidad. Por ejemplo, "
+        "«¿qué requisitos tiene la Beca Despega?» o «¿cuándo inician las clases?».\n\n"
         "También puedes preguntarme por un proceso completo («¿cómo solicito una beca?») o "
         "pedirme que compare dos opciones."
     )
@@ -187,15 +213,24 @@ def _disambiguate(original: str) -> str:
     )
 
 
-def _decline_out_of_domain() -> str:
+def _decline_out_of_domain(domains: Sequence[str] = ()) -> str:
     return (
         "Eso queda fuera de lo que puedo consultar. Respondo únicamente sobre la documentación "
-        f"oficial de UVG Altiplano: {_join(_DOMAINS)}.\n\n"
+        f"oficial de UVG Altiplano, como {_join(list(domains[:4]) or list(_DOMAINS), 'o')}.\n\n"
         "¿Hay algo de esos temas en lo que pueda ayudarte?"
     )
 
 
-def _decline_personal_data() -> str:
+def _decline_personal_data(guest: bool = False) -> str:
+    if guest:
+        # El dato vive en los sistemas de la universidad, no en el asistente: ni siquiera
+        # con cuenta institucional lo consulta Alexis. Se dice dónde está, sin prometer más.
+        return (
+            "Esa información únicamente está disponible para usuarios autenticados mediante una "
+            "cuenta institucional, en los sistemas de la universidad (como el portal de estudiantes).\n\n"
+            "Como visitante, lo que sí puedo hacer es explicarte qué dice la normativa: por ejemplo, "
+            "cómo es el proceso de admisión, qué becas existen o las fechas del calendario académico."
+        )
     return (
         "No tengo acceso a tu información personal: ni a tus notas, ni a tu estado de cuenta, "
         "ni a tu situación académica.\n\n"
@@ -205,11 +240,16 @@ def _decline_personal_data() -> str:
     )
 
 
-def _handle_noise() -> str:
-    return (
-        "No logré entender el mensaje. ¿Puedes escribirlo de otra forma?\n\n"
-        "Puedo ayudarte con reglamentos, becas, beneficios y procesos académicos."
-    )
+_NOISE = (
+    "No logré entender el mensaje. ¿Puedes escribirlo de otra forma?",
+    "Creo que el mensaje llegó incompleto. ¿Me lo escribes de nuevo?",
+    "No alcancé a entender. Cuéntame con unas palabras qué necesitas.",
+)
+
+
+def _handle_noise(context: ConversationContext, domains: Sequence[str] = ()) -> str:
+    # Variar: tres mensajes vacíos seguidos no deben recibir tres veces el mismo texto.
+    return f"{_pick(_NOISE, context)}\n\nPuedo ayudarte con {_join(list(domains[:4]) or list(_DOMAINS), 'o')}."
 
 
 def _resist_injection() -> str:
@@ -254,19 +294,31 @@ class LocalSkillCatalog:
         *,
         original_message: str = "",
         document_names: Sequence[str] = (),
+        active_focus: str | None = None,
+        domains: Sequence[str] = (),
+        guest: bool = False,
     ) -> str:
         skill = plan.skill
 
         if skill is SkillName.INTRODUCE:
-            return _introduce(context)
+            return _introduce(context, active_focus, domains, original_message)
         if skill is SkillName.ACKNOWLEDGE:
             return _acknowledge(context, plan.intent)
         if skill is SkillName.CLOSE:
+            if active_focus:
+                # Quien se despide a mitad de un tema volverá a él: se lo recordamos.
+                # «Continuemos mañana» es una propuesta («Claro»); «adiós», una despedida.
+                later = bool(_LATER_HINT.search(fold(original_message)))
+                opener = "Claro." if later else _pick(("Hasta pronto.", "Que te vaya bien.", "Hasta luego."), context)
+                return f"{opener} Cuando vuelvas, seguimos con {active_focus} donde nos quedamos."
             return _pick(_FAREWELL, context)
         if skill is SkillName.DECLARE_IDENTITY:
+            if _ASKS_IF_AI.search(fold(original_message)):
+                # «¿Eres una IA?» merece un «sí» directo antes de la presentación.
+                return "Sí, soy un asistente de inteligencia artificial, no una persona.\n\n" + _declare_identity().split("\n\n", 1)[1]
             return _declare_identity()
         if skill is SkillName.DECLARE_CAPABILITIES:
-            return _declare_capabilities()
+            return _declare_capabilities(domains)
         if skill is SkillName.DECLARE_DOCUMENT_SCOPE:
             return _declare_document_scope(document_names)
         if skill is SkillName.EXPLAIN_HOW_IT_WORKS:
@@ -278,14 +330,18 @@ class LocalSkillCatalog:
         if skill is SkillName.DISAMBIGUATE:
             return _disambiguate(original_message)
         if skill is SkillName.DECLINE_OUT_OF_DOMAIN:
-            return _decline_out_of_domain()
+            return _decline_out_of_domain(domains)
         if skill is SkillName.DECLINE_PERSONAL_DATA:
-            return _decline_personal_data()
+            return _decline_personal_data(guest)
         if skill is SkillName.HANDLE_NOISE:
-            return _handle_noise()
+            return _handle_noise(context, domains)
         if skill is SkillName.RESIST_INJECTION:
             return _resist_injection()
         if skill is SkillName.CONTAIN_FRUSTRATION:
             return _contain_frustration(context)
+        if skill is SkillName.RESUME_CONVERSATION:
+            # Sin un tema activo que retomar (el caso con tema lo resuelve la capa
+            # conversacional con el estado derivado de la conversación).
+            return "Claro. ¿Sobre qué tema quieres que sigamos?"
 
         raise ValueError(f"La habilidad {skill} no es local y no tiene respuesta en el catálogo.")

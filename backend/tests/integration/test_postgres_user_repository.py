@@ -46,3 +46,53 @@ async def test_adding_duplicate_email_raises_domain_error(db_session) -> None:
 
     with pytest.raises(DuplicateUserError):
         await repository.add(_user("duplicado.integracion@uvg.edu.gt"))
+
+
+# --- Modo invitado (ADR-0019) ---------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_a_guest_round_trips_without_credentials(db_session) -> None:
+    repository = PostgresUserRepository(db_session)
+    first, second = User.guest(new_id(), utc_now()), User.guest(new_id(), utc_now())
+
+    await repository.add(first)
+    await repository.add(second)  # varios invitados conviven: el correo nulo no es único
+
+    found = await repository.get_by_id(first.id)
+    assert found is not None and found.is_guest and found.email is None and found.password_hash is None
+
+
+@pytest.mark.asyncio
+async def test_the_database_rejects_an_institutional_account_without_credentials(db_session) -> None:
+    from sqlalchemy.exc import IntegrityError
+
+    from app.infrastructure.adapters.persistence.orm_models import UserModel
+
+    db_session.add(UserModel(id=new_id(), email=None, password_hash=None, role=UserRole.STUDENT.value, created_at=utc_now()))
+    with pytest.raises(IntegrityError):
+        await db_session.flush()
+
+
+@pytest.mark.asyncio
+async def test_purging_expired_guests_removes_their_conversations_and_keeps_students(db_session) -> None:
+    from datetime import timedelta
+
+    from app.infrastructure.adapters.persistence.postgres_conversation_repository import (
+        PostgresConversationRepository,
+    )
+
+    users = PostgresUserRepository(db_session)
+    conversations = PostgresConversationRepository(db_session)
+    old = utc_now() - timedelta(days=8)
+    expired_guest = User.guest(new_id(), old)
+    old_student = User(new_id(), EmailAddress(f"antiguo.{new_id().hex[:8]}@uvg.edu.gt"), "hash", UserRole.STUDENT, old)
+    await users.add(expired_guest)
+    await users.add(old_student)
+    await conversations.get_or_create_active_conversation(expired_guest.id)
+
+    removed = await users.delete_guests_created_before(utc_now() - timedelta(days=7))
+
+    assert removed >= 1
+    assert await users.get_by_id(expired_guest.id) is None
+    assert await conversations.get_history(expired_guest.id) == []
+    assert await users.get_by_id(old_student.id) is not None

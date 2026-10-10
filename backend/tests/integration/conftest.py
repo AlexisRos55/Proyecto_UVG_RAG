@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 
 import pytest_asyncio
@@ -10,7 +11,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-TEST_DATABASE_URL = "postgresql+psycopg://rag_app:devpassword@localhost:5433/asistente_rag"
+# Sobrescribible para no depender de que el puerto 5433 esté libre en la máquina.
+TEST_DATABASE_URL = os.environ.get(
+    "TEST_DATABASE_URL", "postgresql+psycopg://rag_app:devpassword@localhost:5433/asistente_rag"
+)
 
 
 @pytest_asyncio.fixture

@@ -3,6 +3,17 @@ from __future__ import annotations
 import re
 from typing import Final
 
+from app.domain.services.conversation_lexicon import (
+    AFFIRM,
+    BARE_REPLY,
+    DECLINE,
+    DEEPEN,
+    EXAMPLE,
+    LATER,
+    RESUME,
+    WHY,
+    detect_topics,
+)
 from app.domain.value_objects.conversation_intent import ConversationIntent, IntentClassification
 
 # Confianzas por tipo de evidencia. Una coincidencia exacta con una fórmula social
@@ -23,6 +34,16 @@ _DOMAIN_TERMS = re.compile(
     r"estudiantil|academic\w*|universidad|uvg)\b"
 )
 
+# «¿Pierdo la beca si bajo mi promedio?» plantea un supuesto normativo, no pide
+# ver el expediente: con un condicional o una consecuencia, el posesivo no convierte
+# la consulta en una solicitud de datos personales.
+_HYPOTHETICAL = re.compile(
+    r"\bsi\s+(?:\w+\s+){0,3}(?:mi|mis)\b|\bpierdo\b|\bpuedo\s+perder\b|\bque\s+(?:pasa|sucede)\s+si\b"
+    r"|\bme\s+quitan\b|\ben\s+caso\s+de\b"
+    # «Reprobé dos cursos y tengo beca»: cuenta su situación para saber qué dice la norma.
+    r"|\breprob\w*|\breprueb\w*|\bbaje\s+(?:mi\s+|el\s+)?promedio\b|\bvan\s+a\s+quitar\b|\bme\s+(?:dieron|otorgaron)\b"
+)
+
 # Solo posesivos: «me» en «cómo me inscribo» es reflexivo y describe un proceso
 # general, no una consulta sobre el expediente del estudiante.
 _PERSONAL_MARKERS = re.compile(
@@ -35,6 +56,14 @@ _PERSONAL_MARKERS = re.compile(
 
 # (patrón, intención, confianza). El orden importa: se evalúa de arriba abajo.
 _RULES: Final[tuple[tuple[re.Pattern[str], ConversationIntent, float], ...]] = (
+    # --- Respuestas cortas de chat ---------------------------------------------
+    # «sí porfa», «no por ahora», «simón», «cool»: un acuse. Si respondía a un ofrecimiento,
+    # el rastreador conversacional lo sabe y lo resuelve antes que la política.
+    (
+        re.compile("|".join(f"(?:{p.pattern})" for p in (BARE_REPLY, AFFIRM, DECLINE))),
+        ConversationIntent.ACKNOWLEDGEMENT,
+        _EXACT,
+    ),
     # --- Manipulación de instrucciones -------------------------------------
     (
         re.compile(
@@ -43,6 +72,69 @@ _RULES: Final[tuple[tuple[re.Pattern[str], ConversationIntent, float], ...]] = (
             r"|\bignore\s+(?:all\s+)?(?:previous\s+)?instructions?\b"
         ),
         ConversationIntent.PROMPT_INJECTION,
+        _STRONG,
+    ),
+    # --- Navegación documental (ADR-0013) ----------------------------------
+    # Antes que DOCUMENT_SCOPE: «¿qué documentos hablan de becas?» pregunta por
+    # un tema, mientras que «¿qué documentos manejas?» pregunta por el alcance.
+    (
+        re.compile(
+            r"\b(?:que|cuales?)\s+(?:otros\s+)?(?:documentos?|reglamentos?|normativas?|normas?)\s+"
+            r"(?:estan\s+)?relacionad\w*\b|\b(?:documentos?|reglamentos?)\s+relacionad\w*\s+con\b"
+        ),
+        ConversationIntent.RELATED_DOCUMENTS,
+        _STRONG,
+    ),
+    (
+        re.compile(
+            r"\b(?:que|cual(?:es)?)\s+(?:documentos?|reglamentos?|normativas?|normas?)\s+(?:se\s+)?"
+            r"(?:habla\w*|trata\w*|menciona\w*|regula\w*|cubre\w*|aplica\w*|dice\w*|contiene\w*|incluye\w*"
+            r"|explica\w*|establece\w*|debo|tengo\s+que|puedo|me\s+sirve\w*|consult\w*)\b"
+            r"|\bque\s+(?:debo|tengo\s+que|puedo)\s+(?:consultar|revisar|leer)\b"
+            r"|\ben\s+que\s+(?:documento|reglamento)\b"
+            # Elíptica, tras una pregunta por documentos: «¿y cuáles hablan de graduación?».
+            r"|^(?:y\s+)?cuales\s+(?:hablan|tratan|mencionan|regulan)\b"
+            r"|\bdonde\s+(?:puedo\s+)?(?:consulto|encuentro|busco|reviso|consultar|encontrar|buscar|revisar)\b"
+        ),
+        ConversationIntent.DOCUMENT_ROUTING,
+        _STRONG,
+    ),
+    (
+        re.compile(
+            r"\bdonde\s+(?:se\s+)?(?:habla\w*|trata\w*|menciona\w*|aparece\w*|dice\w*|regula\w*|establece\w*|explica\w*)\b"
+            r"|\b(?:que|cuales?)\s+(?:articulos?|capitulos?|secciones?|apartados?|partes?|paginas?)\s+"
+            r"(?:se\s+)?(?:habla\w*|trata\w*|menciona\w*|regula\w*|establece\w*|aplica\w*|dice\w*|son\s+sobre|sobre|de\s+la|del|de\s+los)\b"
+            r"|\ben\s+que\s+(?:articulo|capitulo|seccion|apartado|parte|pagina)\b"
+        ),
+        ConversationIntent.TOPIC_LOCATION,
+        _STRONG,
+    ),
+    (
+        re.compile(
+            r"\b(?:cuales|que)\s+son\s+(?:los|las)\s+(?:capitulos|secciones|partes|apartados|articulos)\b"
+            r"|\b(?:capitulos|indice|tabla\s+de\s+contenidos?|estructura)\s+(?:del|de\s+la|de\s+este|de\s+ese|de\s+esta)\b"
+            r"|\bcomo\s+esta\s+(?:organizad|estructurad|dividid)\w*\b|\bque\s+capitulos\b"
+            r"|\bcuantos\s+(?:capitulos|articulos)\b"
+        ),
+        ConversationIntent.DOCUMENT_STRUCTURE,
+        _STRONG,
+    ),
+    (
+        re.compile(
+            r"^(?:hablame|cuentame|explicame|informame)\s+(?:de|del|sobre)\s+(?:el\s+|la\s+)?"
+            r"(?:reglamento|documento|calendario|normativa|guia|folleto|proceso\s+de\s+admision)\b"
+            r"|\b(?:de\s+)?que\s+(?:se\s+)?(?:trata|habla|va)\s+(?:(?:el|la|este|esta|ese|esa)\s+)?"
+            r"(?:reglamento|documento|calendario|normativa|guia|folleto|archivo|pdf|proceso)\b"
+            r"|^de\s+que\s+(?:se\s+)?trata$"
+            r"|\b(?:resumen|resume\w*|resumir)\s+(?:de\s+)?(?:el|la|del|este|esta|ese|esa)\s+"
+            r"(?:reglamento|documento|calendario|normativa|guia|proceso)\b"
+            r"|\bque\s+(?:es|contiene)\s+(?:el|la|este|esta|ese|esa)\s+(?:reglamento|documento|calendario|normativa|guia|folleto)\b"
+            r"|\btemas\s+principales\b|\bde\s+que\s+temas\b"
+            # «¿Qué más dice ese reglamento?»: el panorama del documento en consulta.
+            r"|\bque\s+mas\s+(?:dice|contiene|trae|establece|regula)\s+(?:el|la|ese|esa|este|esta|dicho)\s+(?:reglamento|documento|calendario|normativa|guia|folleto)\b"
+            r"|\b(?:ese|este|el)\s+(?:reglamento|documento|calendario|folleto)\s+que\s+mas\s+(?:dice|contiene|trae)\b"
+        ),
+        ConversationIntent.DOCUMENT_OVERVIEW,
         _STRONG,
     ),
     # --- Meta: sobre el propio asistente ------------------------------------
@@ -63,7 +155,10 @@ _RULES: Final[tuple[tuple[re.Pattern[str], ConversationIntent, float], ...]] = (
     (
         re.compile(
             r"\bque\s+(?:informacion|documentos|datos)\s+(?:tienes|manejas|conoces)\b"
-            r"|\bque\s+documentos\b|\bsobre\s+que\s+puedes\s+responder\b"
+            # «¿Qué documentos piden?» pregunta por papeles de un trámite, no por el alcance del asistente.
+            r"|\bque\s+documentos\b(?!\s+(?:me\s+|se\s+|te\s+)?(?:pide\w*|necesit\w*|requier\w*|debo|deb\w+|hay\s+que"
+            r"|entreg\w*|present\w*|llev\w*|solicit\w*|ocup\w*|son\s+necesarios))"
+            r"|\bsobre\s+que\s+puedes\s+responder\b"
             r"|\bcuantos\s+documentos\b"
         ),
         ConversationIntent.DOCUMENT_SCOPE,
@@ -71,7 +166,9 @@ _RULES: Final[tuple[tuple[re.Pattern[str], ConversationIntent, float], ...]] = (
     ),
     (
         re.compile(
-            r"\bcomo\s+funciona\w*\b|\bde\s+donde\s+(?:sacas|obtienes|viene)\b"
+            # «¿Cómo funcionas?», «¿cómo funciona esto?»; no «cómo funciona la u» (eso es orientación).
+            r"\bcomo\s+funcionas\b|\bcomo\s+funciona\s+(?:esto|este\s+(?:chat|asistente|sistema)|el\s+(?:chat|asistente|sistema))\b"
+            r"|^como\s+funciona$|\bde\s+donde\s+(?:sacas|obtienes|viene)\b"
             r"|\bque\s+son\s+(?:esas\s+)?(?:las\s+)?fuentes\b|\bpor\s+que\s+citas\b"
             r"|\bcomo\s+(?:es\s+que\s+)?(?:tu\s+)?(?:trabajas|respondes)\b"
             r"|\busas\s+(?:ia|inteligencia\s+artificial|chatgpt|claude)\b"
@@ -114,17 +211,27 @@ _RULES: Final[tuple[tuple[re.Pattern[str], ConversationIntent, float], ...]] = (
         _EXACT,
     ),
     (
-        re.compile(r"^(?:muchas\s+|muchisimas\s+|mil\s+)?gracias(?:\s+\w+){0,3}$|^te\s+(?:lo\s+)?agradezco\b|^thank"),
+        re.compile(
+            r"^(?:muchas\s+|muchisimas\s+|mil\s+)?gracias(?:\s+\w+){0,3}$|^te\s+(?:lo\s+)?agradezco\b|^thank|^(?:thx|thnx|tnx|ty|grax|grac)$"
+            r"|^(?:\w+\s+){0,2}(?:muchas\s+)?gracias$"
+        ),
         ConversationIntent.THANKS,
         _EXACT,
     ),
+    # La frustración antes que el acuse: «ya me cansé» u «ok, no me sirve» no son un «ok».
     (
         re.compile(
-            r"^(?:ok|oka|okay|vale|listo|entendido|entiendo|perfecto|excelente|genial|"
-            r"va|dale|bien|de\s+acuerdo|correcto|claro|ya|aja)(?:\s+\w+){0,2}$"
+            r"\bno\s+(?:me\s+)?sirve\w*\b|\bno\s+(?:me\s+)?(?:entiendes|ayudas?|funciona)\b"
+            r"|\bes(?:t[oa])?\s+(?:es\s+)?(?:malisimo|pesimo|inutil|terrible)\b"
+            r"|\bque\s+mal\b|\bya\s+te\s+pregunte\b|\bsiempre\s+dices\s+lo\s+mismo\b"
+            r"|\bno\s+me\s+has\s+ayudado\b"
+            # Cansancio y fastidio: «ya me cansé» no es un «ok».
+            r"|\b(?:ya\s+)?me\s+(?:canse|harte|aburri|desespere)\b|\bque\s+(?:fastidio|frustrante|horrible)\b"
+            r"|\bno\s+entiendes\s+nada\b|\bpara\s+que\s+sirves\b"
+            r"|\b(?:una\s+)?(?:porqueria|basura|cochinada)\b|\bnunca\s+(?:responde\w*|sirve\w*|ayuda\w*)\b|\bno\s+responde\w*\s+nada\b"
         ),
-        ConversationIntent.ACKNOWLEDGEMENT,
-        _EXACT,
+        ConversationIntent.FRUSTRATION,
+        _MODERATE,
     ),
     (
         re.compile(r"^como\s+estas\b|^que\s+onda\b|^todo\s+bien\b|^como\s+te\s+va\b|^como\s+has\s+estado\b"),
@@ -133,13 +240,14 @@ _RULES: Final[tuple[tuple[re.Pattern[str], ConversationIntent, float], ...]] = (
     ),
     (
         re.compile(
-            r"\bno\s+(?:me\s+)?sirve\w*\b|\bno\s+(?:me\s+)?(?:entiendes|ayudas|funciona)\b"
-            r"|\bes(?:t[oa])?\s+(?:es\s+)?(?:malisimo|pesimo|inutil|terrible)\b"
-            r"|\bque\s+mal\b|\bya\s+te\s+pregunte\b|\bsiempre\s+dices\s+lo\s+mismo\b"
-            r"|\bno\s+me\s+has\s+ayudado\b"
+            r"^(?:ok|oka|okay|vale|listo|entendido|entiendo|perfecto|excelente|genial|super|muy\s+bien|"
+            r"va|dale|bien|de\s+acuerdo|correcto|claro|ya|aja|jaja\w*|sale|de\s+lujo)(?:\s+\w+){0,2}$"
+            # Afirmaciones, negaciones y risas de chat, solas: «simón», «sip», «xd», «nel».
+            r"|^(?:si|simon|sip|sep|exacto|orale|okis|oki|nitido|chilero|ta\s+bien|esta\s+bien|asi\s+esta\s+bien"
+            r"|no|nop|nel|xd+|lol|jsjs\w*|jeje\w*|ok\s+ok|ah\s+ok|ah\s+ya|ya\s+veo|ya\s+entendi|okey)$"
         ),
-        ConversationIntent.FRUSTRATION,
-        _MODERATE,
+        ConversationIntent.ACKNOWLEDGEMENT,
+        _EXACT,
     ),
     # --- Fuera de dominio ----------------------------------------------------
     (
@@ -158,6 +266,11 @@ _MAX_AMBIGUOUS_WORDS: Final = 2
 _NOISE = re.compile(r"^[^a-z0-9]*$|^(.)\1{3,}$|^[bcdfghjklmnpqrstvwxyz]{5,}$")
 
 
+_LEADING_FILLER = re.compile(
+    r"^(?:(?:ja(?:ja)+\w*|je(?:je)+|ok(?:ay)?|oka|bueno|mmm+|ah|eh)\s+)+(?!(?:porfa|por\s+favor|pues|plis)$)(?=\S)"
+)
+
+
 class RuleBasedIntentClassifier:
     """Clasificador determinista: léxico y reglas, sin llamadas al modelo.
 
@@ -171,16 +284,29 @@ class RuleBasedIntentClassifier:
     """
 
     def classify(self, normalized_message: str) -> IntentClassification:
-        message = normalized_message.strip()
+        # La puntuación interna no cambia la intención: «vale, gracias» es un acuse.
+        message = " ".join(re.sub(r"[,;.:!¡¿?]+", " ", normalized_message).split())
+        # «ok, adiós», «jaja ¿quién eres?»: la interjección inicial no es la intención si sigue algo más.
+        message = _LEADING_FILLER.sub("", message) or message
 
         if not message or _NOISE.match(message):
             return IntentClassification(ConversationIntent.NOISE, _STRONG, "empty_or_noise")
 
         # El léxico institucional gana a cualquier regla social: «gracias, ¿qué becas
-        # hay?» es una consulta, no un agradecimiento.
-        has_domain_terms = bool(_DOMAIN_TERMS.search(message))
+        # hay?» es una consulta, no un agradecimiento. Los temas del léxico
+        # conversacional (elecciones, clubes, cuotas…) también cuentan como dominio.
+        has_domain_terms = bool(_DOMAIN_TERMS.search(message)) or bool(detect_topics(message))
 
-        if _PERSONAL_MARKERS.search(message):
+        if LATER.search(message) and len(message.split()) <= 6:
+            return IntentClassification(ConversationIntent.FAREWELL, _STRONG, "later")
+        if (WHY.match(message) or EXAMPLE.match(message)) and not has_domain_terms:
+            return IntentClassification(ConversationIntent.FOLLOW_UP, _STRONG, "why_or_example")
+        if RESUME.match(message) and not has_domain_terms:
+            return IntentClassification(ConversationIntent.CONTINUATION, _STRONG, "resume")
+        if DEEPEN.match(message):
+            return IntentClassification(ConversationIntent.FOLLOW_UP, _STRONG, "deepen")
+
+        if _PERSONAL_MARKERS.search(message) and not _HYPOTHETICAL.search(message):
             return IntentClassification(
                 ConversationIntent.PERSONAL_DATA, _MODERATE, "personal_markers"
             )
@@ -191,6 +317,10 @@ class RuleBasedIntentClassifier:
             if has_domain_terms and intent in _SOCIAL_INTENTS:
                 # Hay saludo pero también sustancia: se trata como consulta.
                 break
+            if has_domain_terms and intent is ConversationIntent.HOW_IT_WORKS:
+                # «¿Cómo funciona el crédito educativo?» pregunta por la normativa,
+                # no por el asistente.
+                continue
             return IntentClassification(intent, confidence, pattern.pattern[:40])
 
         words = message.split()

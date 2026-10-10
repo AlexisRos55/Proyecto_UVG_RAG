@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from app.domain.entities.user import User
@@ -15,7 +16,7 @@ class InMemoryUserRepository(UserRepositoryPort):
         self._users_by_id: dict[UUID, User] = {}
 
     async def add(self, user: User) -> None:
-        if any(str(u.email) == str(user.email) for u in self._users_by_id.values()):
+        if user.email is not None and any(u.email == user.email for u in self._users_by_id.values()):
             raise DuplicateUserError(f"Ya existe un usuario registrado con el correo {user.email}")
         self._users_by_id[user.id] = user
 
@@ -24,3 +25,9 @@ class InMemoryUserRepository(UserRepositoryPort):
 
     async def get_by_id(self, user_id: UUID) -> User | None:
         return self._users_by_id.get(user_id)
+
+    async def delete_guests_created_before(self, cutoff: datetime) -> int:
+        expired = [u.id for u in self._users_by_id.values() if u.is_guest and u.created_at < cutoff]
+        for user_id in expired:
+            del self._users_by_id[user_id]
+        return len(expired)

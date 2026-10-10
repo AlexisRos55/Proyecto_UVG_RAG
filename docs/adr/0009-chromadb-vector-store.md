@@ -1,6 +1,6 @@
 # ADR-0009: Retener ChromaDB, Sentence Transformers, PyMuPDF y chunking de tamaño fijo
 
-**Estado:** Aceptado
+**Estado:** Aceptado — parcialmente reemplazado por [ADR-0012](0012-structure-aware-ingestion-and-hybrid-retrieval.md) en fragmentación y recuperación (PyMuPDF, limpieza por regex, all-MiniLM-L6-v2 y ChromaDB se mantienen)
 
 **Fecha:** 2026-09-02
 

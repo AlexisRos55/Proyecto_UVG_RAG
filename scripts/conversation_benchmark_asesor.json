@@ -1,0 +1,555 @@
+{
+  "description": "Fase 9.5 · comprensión de asesor: necesidades dichas con palabras propias, elipsis, aceptar u rechazar lo ofrecido, deixis documental y habla coloquial. Etiquetado a partir del texto de los documentos ANTES de implementar los cambios, para medir antes y después.",
+  "conversations": [
+    {
+      "id": "necesidad-padres",
+      "description": "Necesidad económica dicha por la familia: becas, no una búsqueda literal.",
+      "turns": [
+        {
+          "message": "Mis papás no pueden pagar la universidad",
+          "facts": [
+            [
+              "programa regular"
+            ]
+          ],
+          "query_terms": [
+            "beca"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "necesidad-recursos",
+      "description": "«Bajos recursos» es necesidad económica.",
+      "turns": [
+        {
+          "message": "Soy de bajos recursos, ¿qué puedo hacer?",
+          "facts": [
+            [
+              "programa regular",
+              "ayuda financiera"
+            ]
+          ],
+          "query_terms": [
+            "beca"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "necesidad-plata",
+      "description": "Registro coloquial: «plata», «la u».",
+      "turns": [
+        {
+          "message": "no tengo plata para la u",
+          "facts": [
+            [
+              "programa regular",
+              "tipos de ayudas financieras"
+            ]
+          ],
+          "query_terms": [
+            "beca"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "quiero-estudiar",
+      "description": "«Quiero estudiar» es admisión, no una búsqueda de la frase.",
+      "turns": [
+        {
+          "message": "quiero estudiar",
+          "query_terms": [
+            "admision"
+          ],
+          "grounded_path": true,
+          "facts": [
+            [
+              "solicitud de admisión",
+              "prueba de admisión"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "entrar-universidad",
+      "description": "«Entrar a la universidad» es admisión, no unirse a un club.",
+      "turns": [
+        {
+          "message": "quiero entrar a la universidad",
+          "query_terms": [
+            "admision"
+          ],
+          "forbidden_query_terms": [
+            "club"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "como-entro",
+      "description": "«¿Cómo entro a la UVG?»: admisión.",
+      "turns": [
+        {
+          "message": "¿Cómo entro a la UVG?",
+          "query_terms": [
+            "admision"
+          ],
+          "forbidden_query_terms": [
+            "club"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "salir-de-curso",
+      "description": "«Salirme de un curso» es retiro de cursos.",
+      "turns": [
+        {
+          "message": "me quiero salir de un curso",
+          "query_terms": [
+            "retiro"
+          ],
+          "facts": [
+            [
+              "retiro de cursos"
+            ]
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "terminar-carrera",
+      "description": "Terminar la carrera lleva a la graduación.",
+      "turns": [
+        {
+          "message": "ya voy a terminar la carrera, ¿qué sigue?",
+          "query_terms": [
+            "graduacion"
+          ],
+          "facts": [
+            [
+              "graduación"
+            ]
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "reprobar",
+      "description": "Reprobar: lo que la normativa establece (reducción de beca), no un «no encontré».",
+      "turns": [
+        {
+          "message": "voy a reprobar un curso",
+          "grounded_path": true,
+          "facts": [
+            [
+              "reprobación o retiro de cursos",
+              "cursos reprobados"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "becas-elipsis",
+      "description": "Elipsis cortas tras un panorama: «¿y cuánto?», «¿y cuándo?», «¿y después?».",
+      "turns": [
+        {
+          "message": "Háblame de las becas"
+        },
+        {
+          "message": "¿y cuánto?",
+          "query_terms": [
+            "beca",
+            "cobertura"
+          ],
+          "clean_query": true,
+          "grounded_path": true
+        },
+        {
+          "message": "¿y cuándo?",
+          "query_terms": [
+            "beca"
+          ],
+          "clean_query": true
+        },
+        {
+          "message": "¿y después?",
+          "forbidden_query_terms": [
+            "despues"
+          ],
+          "clean_query": true
+        }
+      ]
+    },
+    {
+      "id": "credito-cuanto",
+      "description": "«¿Y cuánto?» del crédito: el interés y montos, sin duplicar la consulta.",
+      "turns": [
+        {
+          "message": "Háblame del crédito educativo"
+        },
+        {
+          "message": "¿y cuánto?",
+          "query_terms": [
+            "credito"
+          ],
+          "clean_query": true,
+          "facts": [
+            [
+              "interés variable del 10%"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "oferta-si",
+      "description": "«Sí» tras un ofrecimiento con varias opciones: preguntar cuál, sin llamar al modelo.",
+      "turns": [
+        {
+          "message": "¿Cuáles son los requisitos de la Beca Despega?"
+        },
+        {
+          "message": "sí",
+          "no_llm": true,
+          "answer_contains": [
+            "cobertura"
+          ]
+        },
+        {
+          "message": "la cobertura",
+          "query_terms": [
+            "despega"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "oferta-no",
+      "description": "«No» tras un ofrecimiento: cierre amable, sin repetir la pregunta al modelo.",
+      "turns": [
+        {
+          "message": "¿Cuánto cubre la Beca Despega?"
+        },
+        {
+          "message": "no",
+          "no_llm": true
+        },
+        {
+          "message": "no gracias",
+          "no_llm": true
+        }
+      ]
+    },
+    {
+      "id": "oferta-primera",
+      "description": "«La primera» tras el ofrecimiento: la primera opción ofrecida.",
+      "turns": [
+        {
+          "message": "¿Cuáles son los requisitos de la Beca Despega?"
+        },
+        {
+          "message": "la primera",
+          "query_terms": [
+            "despega",
+            "cobertura"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "panorama-si",
+      "description": "«Sí» tras el cierre de un panorama: preguntar por dónde seguir, sin modelo.",
+      "turns": [
+        {
+          "message": "Háblame de las becas"
+        },
+        {
+          "message": "sí",
+          "no_llm": true,
+          "answer_contains": [
+            "cubre"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "documento-deixis",
+      "description": "«Allí», «ese reglamento qué más dice»: el documento en consulta.",
+      "turns": [
+        {
+          "message": "¿Qué dice el artículo 13 del reglamento de ayudas financieras?",
+          "facts": [
+            [
+              "artículo 13. programa regular"
+            ]
+          ]
+        },
+        {
+          "message": "el siguiente",
+          "facts": [
+            [
+              "artículo 14. programa de talento"
+            ]
+          ]
+        },
+        {
+          "message": "¿y allí qué dice de los requisitos?",
+          "query_terms": [
+            "requisitos"
+          ],
+          "forbidden_query_terms": [
+            "alli"
+          ],
+          "facts": [
+            [
+              "artículo 16. requisitos"
+            ]
+          ]
+        },
+        {
+          "message": "¿qué más dice ese reglamento?",
+          "no_llm": true,
+          "answer_contains": [
+            "ayudas financieras"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "habla-coloquial",
+      "description": "Muletillas y afirmaciones guatemaltecas: entendidas, sin contaminar la búsqueda.",
+      "turns": [
+        {
+          "message": "q onda",
+          "no_llm": true
+        },
+        {
+          "message": "mire fíjese que quiero una beca xfa",
+          "forbidden_query_terms": [
+            "mire",
+            "fijese",
+            "favor"
+          ],
+          "grounded_path": true
+        },
+        {
+          "message": "simón",
+          "no_llm": true
+        },
+        {
+          "message": "xd",
+          "no_llm": true
+        },
+        {
+          "message": "jaja ok",
+          "no_llm": true
+        },
+        {
+          "message": "pls cuánto cubre",
+          "query_terms": [
+            "beca",
+            "cobertura"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tons",
+      "description": "«Tons?» / «¿y entonces?» piden seguir, no buscar la palabra.",
+      "turns": [
+        {
+          "message": "¿Cuáles son los requisitos del Programa Regular?"
+        },
+        {
+          "message": "tons?",
+          "forbidden_query_terms": [
+            "tons"
+          ],
+          "grounded_path": true
+        },
+        {
+          "message": "y entonces",
+          "forbidden_query_terms": [
+            "entonces"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "acuses",
+      "description": "Acuses que no deben llegar al modelo ni borrar el tema.",
+      "turns": [
+        {
+          "message": "Háblame del crédito educativo"
+        },
+        {
+          "message": "sale",
+          "query_terms": [
+            "credito"
+          ],
+          "grounded_path": true,
+          "note": "Etiqueta revisada tras la primera medición: el turno anterior cierra con «Puedo contarte qué cubre.», y «sale» a esa oferta es aceptarla (antes se etiquetó como acuse)."
+        },
+        {
+          "message": "exacto",
+          "no_llm": true
+        },
+        {
+          "message": "correcto",
+          "no_llm": true
+        },
+        {
+          "message": "👍",
+          "no_llm": true
+        },
+        {
+          "message": "sip",
+          "no_llm": true
+        },
+        {
+          "message": "¿y los requisitos?",
+          "query_terms": [
+            "credito"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "estudiar-carrera",
+      "description": "«Quiero estudiar Informática»: el folleto de la carrera.",
+      "turns": [
+        {
+          "message": "quiero estudiar informática",
+          "query_terms": [
+            "informatica"
+          ],
+          "grounded_path": true,
+          "facts": [
+            [
+              "informátic"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "angustia-beca",
+      "description": "Angustia con el problema dicho: se responde el problema, con calma. Añadido tras descubrir el fallo con la sonda de perfiles emocionales (regresión, no medición «antes»).",
+      "turns": [
+        {
+          "message": "AYUDA URGENTE!!! me van a quitar la beca no sé qué hacer",
+          "query_terms": [
+            "beca"
+          ],
+          "grounded_path": true
+        },
+        {
+          "message": "por favor ayúdeme estoy desesperada",
+          "no_llm": true,
+          "answer_contains": [
+            "con calma"
+          ]
+        },
+        {
+          "message": "¿qué hago?",
+          "no_llm": true,
+          "answer_contains": [
+            "Te propongo"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "preocupado-reprobe",
+      "description": "Contar la situación no es pedir datos personales. Añadido tras descubrir el fallo con la sonda de perfiles emocionales (regresión, no medición «antes»).",
+      "turns": [
+        {
+          "message": "estoy muy preocupado porque reprobé dos cursos y tengo beca",
+          "grounded_path": true,
+          "facts": [
+            [
+              "reprobación o retiro de cursos",
+              "cursos reprobados"
+            ]
+          ]
+        },
+        {
+          "message": "¿me la van a quitar?",
+          "query_terms": [
+            "beca"
+          ],
+          "grounded_path": true
+        }
+      ]
+    },
+    {
+      "id": "alegria-beca",
+      "description": "Buena noticia: condiciones para mantenerla; la alegría se comparte. Añadido tras descubrir el fallo con la sonda de perfiles emocionales (regresión, no medición «antes»).",
+      "turns": [
+        {
+          "message": "¡¡Me dieron la beca!! 🎉🎉 ¿y ahora qué tengo que hacer?",
+          "query_terms": [
+            "condiciones"
+          ],
+          "forbidden_query_terms": [
+            "🎉"
+          ],
+          "grounded_path": true
+        },
+        {
+          "message": "jaja qué emoción",
+          "no_llm": true,
+          "answer_contains": [
+            "gusto"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "estudiante-nuevo",
+      "description": "Quien recién llega: bienvenida y luego una recomendación concreta. Añadido tras descubrir el fallo con la sonda de perfiles emocionales (regresión, no medición «antes»).",
+      "turns": [
+        {
+          "message": "hola soy nuevo y no entiendo nada de cómo funciona la u",
+          "no_llm": true,
+          "answer_contains": [
+            "bienvenida",
+            "admisión"
+          ]
+        },
+        {
+          "message": "¿qué me recomiendas hacer primero?",
+          "no_llm": true,
+          "answer_contains": [
+            "Te propongo empezar por la admisión"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "molesto",
+      "description": "Insulto o queja: se reconoce sin buscar. Añadido tras descubrir el fallo con la sonda de perfiles emocionales (regresión, no medición «antes»).",
+      "turns": [
+        {
+          "message": "esto es una porquería, nunca responde nada",
+          "no_llm": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { Menu } from "lucide-react";
 import { cn } from "@/design-system/cn";
 
+import { Badge } from "@/components/ui/badge";
 import { BrandLockup } from "@/design-system/brand";
 import { IconButton } from "@/design-system/icon-button";
 
@@ -8,6 +9,8 @@ interface ChatHeaderProps {
   title: string | null;
   isOnline: boolean;
   onOpenSidebar: () => void;
+  /** Sesión de invitado (ADR-0019): se identifica con una insignia discreta. */
+  isGuest?: boolean;
 }
 
 /**
@@ -16,7 +19,7 @@ interface ChatHeaderProps {
  * -- en escritorio queda prácticamente vacía para que el protagonista sea la
  * conversación. La marca sólo aparece en móvil, donde el sidebar está oculto.
  */
-export function ChatHeader({ title, isOnline, onOpenSidebar }: ChatHeaderProps) {
+export function ChatHeader({ title, isOnline, onOpenSidebar, isGuest = false }: ChatHeaderProps) {
   return (
     <header className="bg-background/70 pointer-events-none absolute inset-x-0 top-0 z-20 flex h-[var(--header-height)] items-center gap-3 px-4 backdrop-blur-xl sm:px-6">
       <div className="pointer-events-auto flex items-center gap-2.5 lg:hidden">
@@ -36,7 +39,17 @@ export function ChatHeader({ title, isOnline, onOpenSidebar }: ChatHeaderProps) 
           pantallas estrechas: antes el punto era `aria-hidden` y el texto
           `hidden sm:inline`, así que en móvil la caída del servidor no llegaba
           ni a la vista ni al lector de pantalla. */}
-      <p className="ml-auto flex items-center gap-2" role="status">
+      {isGuest && (
+        <Badge
+          variant="outline"
+          className="pointer-events-auto text-muted-foreground ml-auto border-border font-medium"
+          title="Estás utilizando Alexis como visitante"
+        >
+          Invitado
+        </Badge>
+      )}
+
+      <p className={cn("flex items-center gap-2", isGuest ? "ml-3" : "ml-auto")} role="status">
         <span className="sr-only">
           {isOnline ? "Conectado con el servidor" : "Sin conexión con el servidor"}
         </span>

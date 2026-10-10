@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +23,7 @@ class PostgresUserRepository(UserRepositoryPort):
     async def add(self, user: User) -> None:
         model = UserModel(
             id=user.id,
-            email=str(user.email),
+            email=str(user.email) if user.email is not None else None,
             password_hash=user.password_hash,
             role=user.role.value,
             created_at=user.created_at,
@@ -42,11 +43,16 @@ class PostgresUserRepository(UserRepositoryPort):
         model = await self._session.get(UserModel, user_id)
         return self._to_entity(model) if model is not None else None
 
+    async def delete_guests_created_before(self, cutoff: datetime) -> int:
+        statement = delete(UserModel).where(UserModel.role == UserRole.GUEST.value, UserModel.created_at < cutoff)
+        result = await self._session.execute(statement)
+        return int(getattr(result, "rowcount", 0) or 0)
+
     @staticmethod
     def _to_entity(model: UserModel) -> User:
         return User(
             id=model.id,
-            email=EmailAddress(model.email),
+            email=EmailAddress(model.email) if model.email is not None else None,
             password_hash=model.password_hash,
             role=UserRole(model.role),
             created_at=model.created_at,

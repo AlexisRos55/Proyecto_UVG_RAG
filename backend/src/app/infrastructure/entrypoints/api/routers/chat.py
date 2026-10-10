@@ -29,7 +29,7 @@ async def ask_question(
     use_case: Annotated[AnswerStudentQueryUseCase, Depends(get_answer_query_use_case)],
 ) -> AnswerResponseSchema:
     response = await use_case.execute(
-        AnswerQueryRequest(user_id=current_user.id, question=payload.question)
+        AnswerQueryRequest(user_id=current_user.id, question=payload.question, is_guest=current_user.is_guest)
     )
     return AnswerResponseSchema.from_dto(response)
 

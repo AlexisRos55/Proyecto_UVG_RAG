@@ -21,6 +21,7 @@ class LoginRequest:
 @dataclass(frozen=True, slots=True)
 class AuthenticatedSession:
     user_id: UUID
-    email: str
+    # Sin correo en una sesión de invitado (ADR-0019).
+    email: str | None
     role: UserRole
     session_token: str

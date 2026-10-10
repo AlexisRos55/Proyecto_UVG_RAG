@@ -31,6 +31,16 @@ class ConversationIntent(Enum):
     # --- Dominio real ---
     INSTITUTIONAL_QUERY = "institutional_query"
     FOLLOW_UP = "follow_up"
+    # «Continuemos», «¿en qué íbamos?»: retomar el tema activo tras una pausa.
+    CONTINUATION = "continuation"
+
+    # --- Navegación documental (ADR-0013): preguntas sobre los documentos
+    # como documentos, no sobre un dato dentro de ellos ---
+    DOCUMENT_OVERVIEW = "document_overview"
+    DOCUMENT_STRUCTURE = "document_structure"
+    TOPIC_LOCATION = "topic_location"
+    DOCUMENT_ROUTING = "document_routing"
+    RELATED_DOCUMENTS = "related_documents"
 
     # --- Problemático ---
     AMBIGUOUS = "ambiguous"
@@ -43,6 +53,11 @@ class ConversationIntent(Enum):
     def needs_retrieval(self) -> bool:
         """Solo el dominio real justifica recuperar documentos y generar."""
         return self in {ConversationIntent.INSTITUTIONAL_QUERY, ConversationIntent.FOLLOW_UP}
+
+    @property
+    def is_navigational(self) -> bool:
+        """Se responde con el catálogo del corpus, de forma determinista y sin generar."""
+        return self in _NAVIGATIONAL
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,3 +76,14 @@ class IntentClassification:
     def __post_init__(self) -> None:
         if not 0.0 <= self.confidence <= 1.0:
             raise ValueError(f"La confianza debe estar entre 0.0 y 1.0, recibido: {self.confidence}")
+
+
+_NAVIGATIONAL = frozenset(
+    {
+        ConversationIntent.DOCUMENT_OVERVIEW,
+        ConversationIntent.DOCUMENT_STRUCTURE,
+        ConversationIntent.TOPIC_LOCATION,
+        ConversationIntent.DOCUMENT_ROUTING,
+        ConversationIntent.RELATED_DOCUMENTS,
+    }
+)

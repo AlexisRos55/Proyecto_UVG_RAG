@@ -21,6 +21,25 @@ Centralizados en `RagSettings` (`backend/src/app/infrastructure/config/settings.
 | Métrica de distancia vectorial | Coseno (`hnsw:space: cosine`) | *(no expuesto — ver nota)* | Hardcodeado, sin cambios en esta fase |
 | Top-P | *Sin definir* | *(no expuesto)* | Brecha pendiente — ver `docs/10-addendum-tecnico-implementacion.md`, sección V. No incluido en el congelamiento de esta fase por decisión explícita: fijar un valor sin justificación experimental introduciría una variación no controlada |
 
+### Parámetros añadidos en la Fase 9 (ADR-0012 a ADR-0014)
+
+La configuración por defecto pasa a ser la mejorada. **La línea base congelada anterior se reproduce exactamente** con `RAG_CHUNKING_STRATEGY=fixed`, `RAG_RETRIEVAL_MODE=dense` y `RAG_CONTEXT_CHAR_BUDGET=0`: con esos valores el pipeline ejecuta el mismo código de ingesta, recuperación y contexto que antes de la Fase 9. Ambas configuraciones pueden compararse sobre el mismo corpus con `scripts/evaluate_retrieval.py`.
+
+| Parámetro | Valor | Variable de entorno | Justificación |
+|---|---|---|---|
+| Estrategia de fragmentación | `structural` | `RAG_CHUNKING_STRATEGY` | ADR-0012 |
+| Tamaño máximo de fragmento estructural | `600` caracteres | `RAG_STRUCTURAL_CHUNK_SIZE` | Cabe en las 256 subpalabras de all-MiniLM-L6-v2 con su encabezado |
+| Modo de recuperación | `hybrid` (BM25 + coseno, RRF) | `RAG_RETRIEVAL_MODE` | ADR-0012 |
+| Candidatos por canal | `30` | `RAG_CANDIDATE_POOL` | — |
+| Cobertura léxica para evidencia fuerte | `0.5` | `RAG_MIN_LEXICAL_COVERAGE` | Por encima del máximo observado en preguntas fuera de dominio (0.43) |
+| Coseno para evidencia fuerte | `0.55` | `RAG_EVIDENCE_SIMILARITY_THRESHOLD` | Por encima del máximo observado en preguntas fuera de dominio (0.48) |
+| Cobertura léxica mínima para entrar al contexto | `0.25` | `RAG_CONTEXT_MIN_LEXICAL_COVERAGE` | — |
+| k de Reciprocal Rank Fusion | `60` | `RAG_RRF_K` | Valor del artículo original (Cormack et al., 2009) |
+| Presupuesto de contexto | `6000` caracteres por pregunta | `RAG_CONTEXT_CHAR_BUDGET` | `0` desactiva el presupuesto (línea base) |
+| Expansión al artículo completo | hasta `1400` caracteres | `RAG_SECTION_EXPANSION_LIMIT` | Estrategia *small-to-big* |
+
+El umbral congelado `RAG_MIN_SIMILARITY_THRESHOLD=0.35` conserva su significado (similitud mínima para que un fragmento entre al contexto). El índice guarda una firma de la configuración que determina sus vectores (`rag_index_manifest.json` junto a ChromaDB); si al arrancar no coincide con la configuración actual, el backend reindexa todos los documentos.
+
 **Nota sobre la métrica de distancia:** permanece hardcodeada dentro de `ChromaVectorStoreAdapter` porque el Protocolo fija explícitamente la similitud de coseno como método de recuperación (no es un parámetro sujeto a experimentación en este trabajo) — exponerlo como variable de entorno sugeriría, incorrectamente, que es una decisión abierta.
 
 ## Parámetros del modelo generativo
@@ -29,12 +48,13 @@ Centralizados en `RagSettings` (`backend/src/app/infrastructure/config/settings.
 |---|---|---|
 | Modelo | `claude-haiku-4-5-20251001` | `ANTHROPIC_MODEL` |
 | Temperatura | `0.0` | Hardcodeado en `AnthropicLLMAdapter.complete` (vía `extra_body`, ver ADR-0006 addendum) |
+| Tope de tokens de salida | `2048` (antes `1024`) | `ANTHROPIC_MAX_TOKENS` — es un tope, no un consumo: 1024 truncaba respuestas de panorama o por programa (ADR-0015) |
 
 ## Prompt del sistema y estrategia de verificación
 
 | Elemento | Ubicación congelada |
 |---|---|
-| System Prompt (Chain-of-Verification) | `backend/src/app/infrastructure/adapters/llm/single_call_verification_adapter.py`, constante `_SYSTEM_PROMPT` — texto literal, no debe editarse durante la Fase V sin registrar el cambio aquí |
+| System Prompt (Chain-of-Verification) | `backend/src/app/infrastructure/adapters/llm/single_call_verification_adapter.py`, constante `_SYSTEM_PROMPT` — texto literal, no debe editarse durante la Fase V sin registrar el cambio aquí. Modificado en la Fase 9 (ADR-0014): fragmentos rotulados con documento y ubicación, reglas de integración multidocumento y de discrepancias, campos `coverage` y `cited_fragments` |
 | Estrategia de verificación | Una sola llamada (`SingleCallVerificationAdapter`), ver ADR-0005 |
 
 ## Entorno de ejecución
@@ -81,3 +101,5 @@ Documentadas explícitamente para que no se confundan con congelamiento ya reali
 | Fecha | Cambio | Motivo |
 |---|---|---|
 | 2026-09-11 | Congelamiento inicial de todos los parámetros de esta tabla | Fase 3.1 — Preparación de la Investigación, Bloque 2 |
+| 2026-09-24 | Capa de inteligencia de recuperación (ADR-0015): reglas 7 y 2 del prompt de sistema (tablas sin marcas, sin ejemplos ni generalizaciones propias), `ANTHROPIC_MAX_TOKENS=2048`, versión de ingesta `structural-v6` (ficha del documento y anotación de tablas; fuerza reindexación automática) | Prueba en vivo: respuesta truncada y matriz de requisitos inventada; ambas corregidas |
+| 2026-09-24 | Nuevos parámetros de la Fase 9 y nuevo prompt de sistema; la configuración anterior queda como línea base seleccionable | Evidencia medida sobre el corpus oficial (ADR-0012 a ADR-0014, `docs/12-fase9-evolucion-motor-rag.md`). La Fase V del Protocolo aún no había comenzado |
