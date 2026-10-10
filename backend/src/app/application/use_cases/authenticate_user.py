@@ -25,7 +25,7 @@ class AuthenticateUserUseCase:
         email = EmailAddress(request.email, allowed_domain=self._allowed_domain)
         user = await self._user_repository.get_by_email(email)
 
-        if user is None or not self._auth_port.verify_password(
+        if user is None or user.password_hash is None or not self._auth_port.verify_password(
             request.plain_password, user.password_hash
         ):
             raise InvalidCredentialsError("Correo o contraseña incorrectos")

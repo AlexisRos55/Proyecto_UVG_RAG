@@ -19,6 +19,7 @@ from app.application.use_cases.get_indexing_status import GetIndexingStatusUseCa
 from app.application.use_cases.ingest_document import IngestDocumentUseCase
 from app.application.use_cases.manage_document import ManageDocumentUseCase
 from app.application.use_cases.register_student import RegisterStudentUseCase
+from app.application.use_cases.start_guest_session import StartGuestSessionUseCase
 from app.application.use_cases.trigger_reindex import TriggerReindexUseCase
 from app.domain.entities.user import User
 from app.domain.ports.auth_port import AuthPort
@@ -136,6 +137,14 @@ def get_authenticate_use_case(
     auth_settings: Annotated[AuthSettings, Depends(get_auth_settings_dependency)],
 ) -> AuthenticateUserUseCase:
     return AuthenticateUserUseCase(user_repository, auth_port, auth_settings)
+
+
+def get_start_guest_session_use_case(
+    user_repository: Annotated[UserRepositoryPort, Depends(get_user_repository)],
+    auth_port: Annotated[AuthPort, Depends(get_auth_port)],
+    auth_settings: Annotated[AuthSettings, Depends(get_auth_settings_dependency)],
+) -> StartGuestSessionUseCase:
+    return StartGuestSessionUseCase(user_repository, auth_port, auth_settings)
 
 
 def get_answer_query_use_case(

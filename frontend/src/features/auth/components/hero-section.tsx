@@ -24,10 +24,16 @@ const CAPABILITIES: readonly Capability[] = [
  * blanco sin depender de qué zona de la foto quede visible al recortar.
  *
  * Oculto por debajo de `lg`; en pantallas pequeñas la marca la sostiene `MobileBrandBar`.
+ *
+ * El fondo se estira con la página, pero el contenido se ancla a la altura de la
+ * **pantalla** (`sticky` + `min-h` de un viewport): si la tarjeta de acceso crece y la
+ * página hace scroll, el titular no se va al fondo, fuera de la vista. El bloque de
+ * texto se centra en vertical, a la altura de la tarjeta; `min-h` (y no `h`) deja que
+ * crezca en pantallas bajas en lugar de recortarse.
  */
 export function HeroSection() {
   return (
-    <aside className="relative hidden overflow-hidden bg-uvg-navy-deep lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-14">
+    <aside className="relative hidden overflow-clip bg-uvg-navy-deep lg:flex lg:flex-col lg:justify-between lg:p-10 xl:p-14">
       <img
         src="/brand/campus-altiplano-bg.jpg"
         alt=""
@@ -47,7 +53,7 @@ export function HeroSection() {
         variants={staggerContainer(0.09, 0.12)}
         initial="hidden"
         animate="visible"
-        className="relative z-10 flex grow flex-col justify-between gap-10 xl:gap-12"
+        className="sticky top-10 z-10 flex min-h-[calc(100svh-5rem)] flex-col gap-10 xl:top-14 xl:min-h-[calc(100svh-7rem)] xl:gap-12"
       >
         <motion.header variants={fadeSlideRight} className="flex items-center gap-4">
           <img
@@ -61,7 +67,7 @@ export function HeroSection() {
         </motion.header>
 
         {/* motion.div y no div: las variantes sólo se propagan a través de nodos motion. */}
-        <motion.div className="flex flex-col gap-7 xl:gap-9">
+        <motion.div className="my-auto flex flex-col gap-7 xl:gap-9">
           <motion.div variants={fadeSlideUp} className="flex flex-col gap-4">
             <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/[0.08] py-1.5 pr-3.5 pl-2 text-caption font-medium text-white/85 ring-1 ring-white/15 backdrop-blur-sm">
               <Sparkles className="text-uvg-green-masters size-3.5" aria-hidden="true" />

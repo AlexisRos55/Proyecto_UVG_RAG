@@ -311,6 +311,7 @@ class AnswerStudentQueryUseCase:
                 outlines=outlines,
                 active_focus=self._memory_label(state, outlines),
                 domains=[label for label, _ in await self._covered_menu()],
+                guest=request.is_guest,
             )
 
         query = plan.resolved_query or sanitized.safe_for_prompt
@@ -1169,6 +1170,7 @@ class AnswerStudentQueryUseCase:
         outlines: Sequence[DocumentOutline] = (),
         active_focus: str | None = None,
         domains: Sequence[str] = (),
+        guest: bool = False,
     ) -> AnswerQueryResponse:
         document_names: tuple[str, ...] = ()
         if plan.skill is SkillName.DECLARE_DOCUMENT_SCOPE:
@@ -1186,6 +1188,7 @@ class AnswerStudentQueryUseCase:
             document_names=document_names,
             active_focus=active_focus,
             domains=domains,
+            guest=guest,
         )
 
         # `is_grounded=None` distingue "no aplica" de "no fundamentada": estas

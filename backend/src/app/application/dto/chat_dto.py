@@ -12,6 +12,8 @@ from app.domain.value_objects.verified_answer import VerificationConfidence
 class AnswerQueryRequest:
     user_id: UUID
     question: str
+    # Visitante sin cuenta institucional (ADR-0019): cambia lo que se le puede ofrecer, no la búsqueda.
+    is_guest: bool = False
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,11 +1,12 @@
 // Tipos que reflejan los esquemas Pydantic del backend (contrato HTTP), no las entidades
 // de dominio internas — ver backend/src/app/infrastructure/entrypoints/api/schemas/.
 
-export type UserRole = "student" | "admin";
+// «guest»: visitante sin cuenta institucional (ADR-0019); su sesión no tiene correo.
+export type UserRole = "student" | "admin" | "guest";
 
 export interface AuthResponse {
   user_id: string;
-  email: string;
+  email: string | null;
   role: UserRole;
   session_token: string;
 }

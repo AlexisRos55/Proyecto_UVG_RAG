@@ -19,7 +19,8 @@ export interface ConversationListItem {
 }
 
 interface SidebarProps {
-  userEmail: string;
+  /** Correo institucional, o «Invitado» en una sesión de visitante. */
+  userLabel: string;
   /** Muestra el acceso a la gestión documental. Antes esa sección solo era
    *  alcanzable tecleando la URL: existía pero nadie podía descubrirla. */
   isAdmin: boolean;
@@ -105,7 +106,7 @@ function ConversationRow({
 }
 
 function SidebarContent({
-  userEmail,
+  userLabel,
   isAdmin,
   conversations,
   activeConversationId,
@@ -218,10 +219,10 @@ function SidebarContent({
       <div className="relative flex items-center gap-1 px-3 pt-3 pb-4">
         <div className="flex min-w-0 flex-1 items-center gap-2.5 px-1.5">
           <span className="bg-primary/12 text-primary text-micro ring-primary/15 flex size-7 shrink-0 items-center justify-center rounded-full font-semibold tracking-normal ring-1">
-            {userEmail.charAt(0).toUpperCase()}
+            {userLabel.charAt(0).toUpperCase()}
           </span>
-          <span className="text-caption text-muted-foreground truncate" title={userEmail}>
-            {userEmail}
+          <span className="text-caption text-muted-foreground truncate" title={userLabel}>
+            {userLabel}
           </span>
         </div>
         <ThemeToggle />

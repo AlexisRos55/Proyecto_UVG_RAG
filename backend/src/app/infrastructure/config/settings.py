@@ -43,6 +43,9 @@ class AuthSettings(BaseSettings):
     # account is seeded at startup if it does not exist yet, so `docker compose up` alone
     # is enough for the demo login. Not a replacement for registration, which stays intact.
     default_admin_email: str = "admin@uvg.edu.gt"
+    # Modo invitado (ADR-0019): sus sesiones y conversaciones se eliminan pasado este
+    # plazo. Coincide con el olvido de la memoria conversacional (7 días).
+    guest_retention_days: int = 7
     default_admin_password: str = "admin123"
 
     @property

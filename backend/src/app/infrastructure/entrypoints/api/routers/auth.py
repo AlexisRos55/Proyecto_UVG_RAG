@@ -7,9 +7,11 @@ from fastapi import APIRouter, Depends
 from app.application.dto.auth_dto import LoginRequest, RegisterStudentRequest
 from app.application.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.application.use_cases.register_student import RegisterStudentUseCase
+from app.application.use_cases.start_guest_session import StartGuestSessionUseCase
 from app.infrastructure.entrypoints.api.dependencies import (
     get_authenticate_use_case,
     get_register_use_case,
+    get_start_guest_session_use_case,
 )
 from app.infrastructure.entrypoints.api.schemas.auth_schemas import (
     AuthResponseSchema,
@@ -40,3 +42,11 @@ async def login(
         LoginRequest(email=payload.email, plain_password=payload.password)
     )
     return AuthResponseSchema.from_session(session)
+
+
+@router.post("/guest", response_model=AuthResponseSchema, status_code=201)
+async def start_guest_session(
+    use_case: Annotated[StartGuestSessionUseCase, Depends(get_start_guest_session_use_case)],
+) -> AuthResponseSchema:
+    """Modo invitado (ADR-0019): sesión temporal sin correo ni contraseña."""
+    return AuthResponseSchema.from_session(await use_case.execute())

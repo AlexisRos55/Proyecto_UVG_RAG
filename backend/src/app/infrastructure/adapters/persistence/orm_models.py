@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -16,10 +16,17 @@ class Base(DeclarativeBase):
 
 class UserModel(Base):
     __tablename__ = "users"
+    # Solo un invitado puede no tener credenciales (ADR-0019); la base de datos lo garantiza.
+    __table_args__ = (
+        CheckConstraint(
+            "role = 'guest' OR (email IS NOT NULL AND password_hash IS NOT NULL)",
+            name="ck_users_credentials_unless_guest",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
-    email: Mapped[str] = mapped_column(Text, unique=True, nullable=False, index=True)
-    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    email: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True, index=True)
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False)
 

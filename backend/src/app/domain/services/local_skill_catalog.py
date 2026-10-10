@@ -221,7 +221,16 @@ def _decline_out_of_domain(domains: Sequence[str] = ()) -> str:
     )
 
 
-def _decline_personal_data() -> str:
+def _decline_personal_data(guest: bool = False) -> str:
+    if guest:
+        # El dato vive en los sistemas de la universidad, no en el asistente: ni siquiera
+        # con cuenta institucional lo consulta Alexis. Se dice dónde está, sin prometer más.
+        return (
+            "Esa información únicamente está disponible para usuarios autenticados mediante una "
+            "cuenta institucional, en los sistemas de la universidad (como el portal de estudiantes).\n\n"
+            "Como visitante, lo que sí puedo hacer es explicarte qué dice la normativa: por ejemplo, "
+            "cómo es el proceso de admisión, qué becas existen o las fechas del calendario académico."
+        )
     return (
         "No tengo acceso a tu información personal: ni a tus notas, ni a tu estado de cuenta, "
         "ni a tu situación académica.\n\n"
@@ -287,6 +296,7 @@ class LocalSkillCatalog:
         document_names: Sequence[str] = (),
         active_focus: str | None = None,
         domains: Sequence[str] = (),
+        guest: bool = False,
     ) -> str:
         skill = plan.skill
 
@@ -322,7 +332,7 @@ class LocalSkillCatalog:
         if skill is SkillName.DECLINE_OUT_OF_DOMAIN:
             return _decline_out_of_domain(domains)
         if skill is SkillName.DECLINE_PERSONAL_DATA:
-            return _decline_personal_data()
+            return _decline_personal_data(guest)
         if skill is SkillName.HANDLE_NOISE:
             return _handle_noise(context, domains)
         if skill is SkillName.RESIST_INJECTION:

@@ -20,7 +20,8 @@ class LoginRequestSchema(BaseModel):
 
 class AuthResponseSchema(BaseModel):
     user_id: UUID
-    email: str
+    # Nulo en una sesión de invitado (ADR-0019).
+    email: str | None
     role: UserRole
     session_token: str
 
