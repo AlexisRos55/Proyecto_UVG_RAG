@@ -4,11 +4,14 @@ import { ArrowUpRight } from "lucide-react";
 import { BrandGlyph } from "@/design-system/brand";
 import { fadeRise, stagger, transition } from "@/design-system/motion";
 
+// Preguntas que el corpus oficial responde (comprobadas contra el sistema en ejecución),
+// una por documento distinto: ayudas financieras, grupos estudiantiles, admisión y
+// Centro de Idiomas. Las anteriores venían del corpus ficticio y llevaban a abstenciones.
 const SUGGESTIONS = [
-  "¿Cuál es el reglamento de inscripción?",
-  "¿Qué becas y beneficios ofrece la universidad?",
-  "¿Qué cubre el seguro estudiantil?",
-  "¿Cuáles son los requisitos de graduación?",
+  "¿Qué tipos de ayuda financiera ofrece la universidad?",
+  "¿Cómo puedo crear un club nuevo en la universidad?",
+  "¿Cuáles son los pasos para entrar como estudiante de primer ingreso?",
+  "¿Cuánto cuestan los cursos libres de inglés?",
 ] as const;
 
 interface EmptyStateProps {
@@ -54,8 +57,8 @@ export function EmptyState({ userName, onSelect }: EmptyStateProps) {
         variants={fadeRise}
         className="text-body text-muted-foreground mt-4 max-w-md text-balance"
       >
-        Pregunta por reglamentos, becas, seguro estudiantil o cualquier proceso académico del
-        campus.
+        Pregunta por becas y ayudas financieras, grupos estudiantiles, admisión, el calendario
+        académico o la oferta académica del campus.
       </motion.p>
 
       <motion.div variants={fadeRise} className="mt-12 w-full max-w-lg">
