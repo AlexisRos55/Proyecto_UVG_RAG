@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-10-10T07:24:03.681Z",
+  "app": "http://localhost:5173",
+  "figures": {
+    "8": {
+      "file": "docs/thesis/figures/capturas/Figura08_inicio_sesion.png",
+      "pixels": "2880 × 1800"
+    },
+    "9": {
+      "file": "docs/thesis/figures/capturas/Figura09_modo_invitado.png",
+      "pixels": "2880 × 1800",
+      "question_ok": true,
+      "is_grounded": true,
+      "confidence": "high",
+      "sources": [
+        "Calendario Académico · pág. 4"
+      ],
+      "answer_start": "Hasta el 17 de octubre de 2026 puedes pagar la cuota de estudios de octubre sin recargo.",
+      "warnings": []
+    },
+    "10": {
+      "file": "docs/thesis/figures/capturas/Figura10_pantalla_inicial.png",
+      "pixels": "2880 × 1800",
+      "account": "demo.tesis4@uvg.edu.gt"
+    },
+    "11": {
+      "file": "docs/thesis/figures/capturas/Figura11_respuesta_citada.png",
+      "pixels": "2880 × 2370",
+      "account": "demo.tesis4@uvg.edu.gt",
+      "question_ok": true,
+      "is_grounded": true,
+      "confidence": "high",
+      "sources": [
+        "Reglamento de ayudas financieras · Capítulo 1 · Artículo 7. Tipos de ayudas financieras · pág. 4",
+        "Reglamento de ayudas financieras · Capítulo III · Artículo 12. Horas Beca · pág. 6"
+      ],
+      "answer_start": "La Universidad del Valle de Guatemala ofrece los siguientes tipos de ayuda financiera:\n\n- **Beca.** Ayuda financiera no reembolsable que se otorga en porcentajes fijados según el análisis de la situación socioeconómica d",
+      "warnings": []
+    },
+    "12": {
+      "file": "docs/thesis/figures/capturas/Figura12_abstencion.png",
+      "pixels": "2880 × 1800",
+      "account": "demo.abstencion2@uvg.edu.gt",
+      "question": "Q31",
+      "abstention": "sin normativa (antes de llamar al modelo)",
+      "question_ok": true,
+      "is_grounded": false,
+      "confidence": "low",
+      "sources": [],
+      "answer_start": "No logré relacionar tu mensaje con la normativa oficial. Si me lo cuentas con otras palabras (qué quieres hacer o qué te preocupa), lo busco de nuevo.\n\nTambién puedo orientarte con las becas y ayudas financieras, el cale",
+      "warnings": []
+    },
+    "13": {
+      "file": "docs/thesis/figures/capturas/Figura13_historial.png",
+      "pixels": "2880 × 2200",
+      "account": "demo.tesis4@uvg.edu.gt",
+      "turn2": {
+        "question_ok": true,
+        "is_grounded": true,
+        "confidence": "high",
+        "sources": [
+          "Reglamento de ayudas financieras · Capítulo 1 · Artículo 7. Tipos de ayudas financieras · pág. 4",
+          "Reglamento de ayudas financieras · Capítulo V · Artículo 22. Programa Regular · pág. 13",
+          "Reglamento de ayudas financieras · Capítulo V · Artículo 25. Condiciones · pág. 15"
+        ],
+        "answer_start": "La diferencia principal es que la beca no se reembolsa y el crédito educativo sí: la beca es una ayuda que la Universidad te otorga sin que tengas que devolverla, mientras que el crédito es un préstamo que debes reembols",
+        "warnings": []
+      }
+    },
+    "14": {
+      "file": "docs/thesis/figures/capturas/Figura14_panel_administrativo.png",
+      "pixels": "página completa",
+      "documents": 15,
+      "warnings": []
+    }
+  }
+}

@@ -1,0 +1,37 @@
+%% Figura 5. Arquitectura de despliegue del prototipo con Docker Compose.
+%% Fuente de verdad: docker-compose.yml, infrastructure/docker/*.Dockerfile,
+%% infrastructure/entrypoints/api/main.py (arranque) y .env.example.
+%% Muestra qué sale de la infraestructura del proyecto: solo la llamada HTTPS a la API de
+%% Anthropic, con los fragmentos de cada consulta (marco teórico, sección F.3).
+%%{init: {"theme": "base", "flowchart": {"curve": "basis", "nodeSpacing": 34, "rankSpacing": 40, "padding": 12, "wrappingWidth": 300}, "themeCSS": "* { font-family: Arial, Helvetica, sans-serif !important; }", "themeVariables": {"edgeLabelBackground": "#ffffff", "fontFamily": "Arial, sans-serif", "fontSize": "14px", "lineColor": "#374151", "primaryTextColor": "#111827", "clusterBkg": "#ffffff", "clusterBorder": "#6b7280"}}}%%
+flowchart TB
+    USR["<b>Navegador del usuario</b><br/>estudiante · administrador · invitado"]
+
+    subgraph HOST["Contenedores de Docker Compose · equipo anfitrión con Docker Desktop (macOS o Windows)"]
+        direction TB
+        FE["<b>frontend</b> · puerto 5173<br/>Node.js compila la SPA<br/>(React + Vite); nginx la sirve"]
+        BE["<b>backend</b> · puerto 8000<br/>Python 3.12 + FastAPI<br/>embebidos: ChromaDB y<br/>all-MiniLM-L6-v2<br/>al iniciar: migraciones, cuenta<br/>administrativa, indexación inicial<br/>volúmenes: chroma_data,<br/>documents_data"]
+        PG["<b>postgres</b> · puerto 5432<br/>PostgreSQL 16 (alpine)<br/>verificación pg_isready<br/>volumen: postgres_data"]
+    end
+
+    ENV[/"<b>.env</b><br/>clave de API, credenciales<br/>y parámetros RAG_*"/]
+    CLAUDE["<b>API de Anthropic</b><br/>Claude Haiku 4.5<br/>(único servicio externo)"]
+
+    USR -->|"HTTP · página"| FE
+    USR -->|"HTTP/JSON · JWT"| BE
+    ENV -.-> BE
+    BE -->|"SQL asíncrono"| PG
+    PG -.->|"«healthy» habilita"| BE
+    BE -.->|"«healthy» habilita"| FE
+    PG ~~~ CLAUDE
+    BE -->|"HTTPS: solo la pregunta y<br/>los fragmentos recuperados"| CLAUDE
+
+    classDef user fill:#f3f4f6,stroke:#6b7280,color:#111827
+    classDef svc fill:#e8f3ec,stroke:#008c36,color:#0b3d1f,text-align:left
+    classDef ext fill:#fff7e6,stroke:#b7791f,color:#3d2a06
+    classDef cfg fill:#ffffff,stroke:#6b7280,color:#111827,stroke-dasharray:4 3
+    class USR user
+    class FE,BE,PG svc
+    class CLAUDE ext
+    class ENV cfg
+    style HOST fill:#fafafa,stroke:#374151,stroke-width:2px

@@ -1,0 +1,65 @@
+%% Figura 7. Flujo de atención de una consulta: usuario → frontend → API → motor RAG →
+%% recuperación → Claude → verificación → respuesta → fuentes → usuario.
+%% Fuente de verdad: router /chat y get_current_user (infrastructure/entrypoints/api),
+%% AnswerStudentQueryUseCase.execute y _answer_grounded
+%% (application/use_cases/answer_student_query.py), KnowledgeRetriever, ContextAssembler y
+%% SingleCallVerificationAdapter. Valores: RagSettings (infrastructure/config/settings.py).
+%% Las decisiones se dibujan como hexágonos (forma alternativa de decisión) para ahorrar
+%% alto. Colores: verde oscuro = única llamada al modelo; gris = respuesta sin el modelo;
+%% ámbar = abstenciones y errores; azul = decisiones.
+%% Diseño para impresión: una columna principal y las salidas laterales junto a cada
+%% decisión. Todas las salidas laterales también se guardan en el historial (paso 6); esas
+%% flechas se omiten a propósito porque cruzarían el diagrama.
+%%{init: {"theme": "base", "flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 22, "padding": 8, "wrappingWidth": 400}, "themeVariables": {"edgeLabelBackground": "#ffffff", "fontFamily": "Arial, sans-serif", "fontSize": "14px", "lineColor": "#374151", "primaryTextColor": "#111827"}, "themeCSS": "* { font-family: Arial, Helvetica, sans-serif !important; }"}}%%
+flowchart TB
+    START(["<b>1. Usuario y frontend</b><br/>escribe la consulta en el chat;<br/>POST /chat con su token JWT"])
+    AUTH{{"¿Sesión válida?"}}
+    DENY(["401: vuelve al<br/>inicio de sesión"])
+
+    UND["<b>2. API y comprensión</b> (sin costo de API)<br/>2.1 Guarda el mensaje en la conversación<br/>2.2 MessageSanitizer: longitud, inyección<br/>2.3 RuleBasedIntentClassifier: intención<br/>2.4 ResponsePolicy: habilidad y formato<br/>2.5 ConversationTracker: tema y referencias"]
+
+    LOCAL{{"¿Se resuelve sin buscar?"}}
+    RLOCAL["<b>Respuesta sin el modelo</b><br/>saludo, preguntas sobre<br/>el asistente, fuera de<br/>dominio, datos personales,<br/>manipulación, ambigüedad,<br/>orientación o catálogo"]
+
+    RET["<b>3. Motor RAG: recuperación híbrida</b><br/>3.1 QueryAnalyzer: subpreguntas y documentos<br/>3.2 Embedding all-MiniLM-L6-v2 (384 dim.)<br/>3.3 ChromaDB (coseno, 30 candidatos)<br/>en paralelo con BM25 en memoria<br/>3.4 Fusión RRF (k = 60) y EvidenceReranker<br/>3.5 Admisión: evidencia ≥ 0.55 / léxica ≥ 0.5;<br/>contexto ≥ 0.35 / léxica ≥ 0.25<br/>3.6 ContextAssembler: ≤ 8 pasajes, 6000 car."]
+
+    HAS{{"¿Hay evidencia?"}}
+    ABS1(["<b>Abstención<br/>«sin normativa»</b><br/>sin llamar al modelo"])
+
+    GEN["<b>4. Claude y verificación</b> (una llamada)<br/>4.1 AnswerPlanner: formato de la respuesta<br/>4.2 Claude Haiku 4.5, temperatura 0.0,<br/>1024 tokens, pasajes numerados<br/>4.3 Chain-of-Verification con tool use:<br/>respuesta, is_grounded, confianza,<br/>cobertura y fragmentos citados"]
+
+    FAIL(["<b>Fallo del<br/>proveedor</b><br/>mensaje de<br/>reintento"])
+    GRD{{"¿Fundamentada y con cobertura?"}}
+    ABS2(["<b>Abstención<br/>«información<br/>insuficiente»</b><br/>remite a la oficina"])
+
+    CITE["<b>5. Respuesta y fuentes</b><br/>5.1 Cita solo los pasajes usados:<br/>documento · sección · páginas<br/>5.2 Matiz si la confianza es media o baja"]
+    SAVE["<b>6. Persistencia y medición</b><br/>guarda respuesta, confianza y fuentes<br/>(también las salidas laterales) y<br/>registra los tiempos de cada etapa"]
+    END(["<b>7. Usuario</b><br/>ve la respuesta en Markdown,<br/>el bloque «Fuentes» y la confianza"])
+
+    START --> AUTH
+    AUTH -- No --> DENY
+    AUTH -- Sí --> UND --> LOCAL
+    LOCAL -- Sí --> RLOCAL
+    LOCAL -- No --> RET --> HAS
+    HAS -- No --> ABS1
+    HAS -- Sí --> GEN
+    GEN -. error .-> FAIL
+    GEN --> GRD
+    GRD -- No --> ABS2
+    GRD -- Sí --> CITE --> SAVE --> END
+
+    classDef terminal fill:#111827,stroke:#111827,color:#ffffff
+    classDef process fill:#ffffff,stroke:#374151,color:#111827,text-align:left
+    classDef decision fill:#eef6ff,stroke:#3b6ea8,color:#0f2a4a
+    classDef llm fill:#004533,stroke:#004533,color:#ffffff,text-align:left
+    classDef local fill:#f3f4f6,stroke:#6b7280,color:#111827
+    classDef abstain fill:#fff7e6,stroke:#b7791f,color:#3d2a06
+    classDef good fill:#e8f3ec,stroke:#008c36,color:#0b3d1f,text-align:left
+
+    class START,END terminal
+    class UND,RET,SAVE process
+    class AUTH,LOCAL,HAS,GRD decision
+    class GEN llm
+    class RLOCAL local
+    class DENY,ABS1,ABS2,FAIL abstain
+    class CITE good

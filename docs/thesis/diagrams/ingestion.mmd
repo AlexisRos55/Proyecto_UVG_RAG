@@ -1,0 +1,56 @@
+%% Figura 6. Pipeline de ingesta documental (Fase I y Fase II del protocolo).
+%% Fuente de verdad: IngestDocumentUseCase (application/use_cases/ingest_document.py),
+%% DocumentIndexingPipeline._structural_chunks y process
+%% (infrastructure/adapters/document_processing/), SynchronizedVectorStore y
+%% bootstrap.seed_documents_from_directory. Valores: RagSettings (estrategia «structural»,
+%% 600 caracteres por fragmento, solapamiento de 100).
+%% La línea base congelada (fragmentos fijos de 1000 caracteres) sigue disponible con
+%% RAG_CHUNKING_STRATEGY=fixed, pero no es la configuración desplegada.
+%%{init: {"theme": "base", "flowchart": {"curve": "basis", "nodeSpacing": 30, "rankSpacing": 30, "padding": 10, "wrappingWidth": 460}, "themeCSS": "* { font-family: Arial, Helvetica, sans-serif !important; }", "themeVariables": {"edgeLabelBackground": "#ffffff", "fontFamily": "Arial, sans-serif", "fontSize": "14px", "lineColor": "#374151", "primaryTextColor": "#111827"}}}%%
+flowchart TB
+    subgraph SRC["Vías de entrada (un mismo caso de uso)"]
+        direction LR
+        V1["Arranque del backend<br/>PDF de la carpeta inicial<br/>no registrados"]
+        V2["Panel administrativo<br/>POST /admin/documents<br/>(solo application/pdf)"]
+        V3["Línea de comandos<br/>scripts/ingest.py"]
+    end
+
+    REG["<b>1. Registro</b> · IngestDocumentUseCase<br/>fila en la tabla documents de PostgreSQL con estado «pendiente»"]
+
+    EXT["<b>2. Extracción</b> · PyMuPDFExtractorAdapter<br/>texto por página, título y número de páginas"]
+    BOIL["<b>3. Limpieza estructural</b><br/>3.1 Retiro del encabezado y las firmas repetidos en cada página<br/>(código, versión y fecha de vigencia se conservan como datos del documento)<br/>3.2 Reconocimiento de la estructura: capítulos, artículos, literales y secciones"]
+    CHK["<b>4. Fragmentación estructural</b> · StructuralChunkingService<br/>el artículo es la unidad: si cabe en 600 caracteres se emite entero; las unidades<br/>muy cortas se agrupan y las largas se parten por oraciones con solapamiento de 100;<br/>cada fragmento lleva su ancla: sección y páginas<br/>4.1 Limpieza con expresiones regulares · RegexTextCleaner<br/>4.2 Anotación de las tablas de marcas · ficha del documento"]
+    EMB["<b>5. Vectorización</b> · SentenceTransformersEmbeddingAdapter<br/>all-MiniLM-L6-v2 · vectores de 384 dimensiones, en un hilo aparte"]
+    UPS["<b>6. Indexación</b> · ChromaVectorStoreAdapter<br/>upsert en la colección institutional_documents (coseno) con texto,<br/>vector y metadatos: documento, posición, sección y páginas"]
+    LEX["<b>6.1 Sincronización léxica</b> · SynchronizedVectorStore<br/>la misma escritura actualiza el índice BM25 y el catálogo en memoria"]
+
+    OK{"¿Todas las etapas<br/>terminaron?"}
+    IDX(["Estado «indexado»<br/>disponible de inmediato para el chat,<br/>sin reiniciar el servicio"])
+    ERR(["Estado «error»<br/>con el mensaje de la etapa que falló"])
+
+    REX["Reindexar o eliminar<br/>(panel administrativo)"]
+    DEL["Se borran primero todos los fragmentos<br/>del documento en ChromaDB y en el índice léxico"]
+
+    V1 --> REG
+    V2 --> REG
+    V3 --> REG
+    REG --> EXT --> BOIL --> CHK --> EMB --> UPS --> LEX --> OK
+    OK -- Sí --> IDX
+    OK -- No --> ERR
+    REX --> DEL -->|"reindexar"| EXT
+
+    classDef entry fill:#eef6ff,stroke:#3b6ea8,color:#0f2a4a
+    classDef process fill:#ffffff,stroke:#374151,color:#111827,text-align:left
+    classDef store fill:#e8f3ec,stroke:#008c36,color:#0b3d1f,text-align:left
+    classDef decision fill:#eef6ff,stroke:#3b6ea8,color:#0f2a4a
+    classDef good fill:#004533,stroke:#004533,color:#ffffff
+    classDef bad fill:#fff7e6,stroke:#b7791f,color:#3d2a06
+    classDef maint fill:#f3f4f6,stroke:#6b7280,color:#111827
+
+    class V1,V2,V3 entry
+    class REG,EXT,BOIL,CHK,EMB process
+    class UPS,LEX store
+    class OK decision
+    class IDX good
+    class ERR bad
+    class REX,DEL maint
