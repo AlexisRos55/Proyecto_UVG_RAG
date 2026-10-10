@@ -1,65 +1,377 @@
 {
-  "description": "Conjunto de referencia para la evaluacion RAGAS (EPIC-6, ADR-0010). Preguntas basadas en el corpus de ejemplo de scripts/sample_corpus/ (ver scripts/generate_sample_corpus.py). Debe reemplazarse por preguntas reales sobre los documentos oficiales de UVG Altiplano cuando esten disponibles.",
+  "description": "Banco de preguntas de referencia de la Fase V (protocolo, sección VIII.E.1). 30 preguntas con respuesta en el corpus oficial de UVG Altiplano y 10 fuera del corpus para medir la exactitud de abstención. Cada respuesta de referencia se redactó a partir del texto del documento y ubicación indicados. Versión preliminar pendiente de revisión del asesor; no modificar después de iniciar la evaluación.",
+  "version": "1.0-borrador",
+  "created": "2026-10-08",
   "cases": [
     {
-      "question": "¿Con cuántos días de anticipación debo solicitar mi reincorporación?",
-      "reference_answer": "Debes presentar tu solicitud de reincorporación en la oficina de Registro Académico con al menos 30 días de anticipación al inicio del ciclo.",
-      "expect_grounded": true
+      "id": "Q01",
+      "question": "¿Qué tipos de ayuda financiera ofrece la universidad?",
+      "reference_answer": "El Programa de Ayudas Financieras contempla tres tipos de apoyo: la beca, que es una ayuda no reembolsable; el crédito educativo, que el estudiante debe reembolsar a la Universidad; y el subsidio por auxiliatura, un monto que se acredita a la cuenta del estudiante cuando es nombrado auxiliar en determinados cursos o actividades institucionales.",
+      "expect_grounded": true,
+      "type": "Lista",
+      "source_document": "Reglamento de Ayudas Financieras (UVG.DAF.02.001, v10.0)",
+      "source_location": "Art. 7"
     },
     {
-      "question": "¿Qué porcentaje de la colegiatura cubre la Beca de Excelencia Académica?",
-      "reference_answer": "La Beca de Excelencia Académica cubre hasta el 50% del valor de la colegiatura.",
-      "expect_grounded": true
+      "id": "Q02",
+      "question": "¿Qué diferencia hay entre una beca y un crédito educativo?",
+      "reference_answer": "La beca es una ayuda financiera no reembolsable que se otorga en porcentajes según el análisis socioeconómico del estudiante o las condiciones del programa. El crédito educativo también se otorga según el análisis socioeconómico y la capacidad de pago, pero es una ayuda económica que el estudiante debe reembolsar a la Universidad.",
+      "expect_grounded": true,
+      "type": "Comparación",
+      "source_document": "Reglamento de Ayudas Financieras (UVG.DAF.02.001, v10.0)",
+      "source_location": "Art. 7"
     },
     {
-      "question": "¿Cuál es el índice académico mínimo para mantener la Beca de Excelencia Académica?",
-      "reference_answer": "Se requiere un índice académico mínimo de 85 puntos.",
-      "expect_grounded": true
+      "id": "Q03",
+      "question": "¿La beca me cubre el pago de inscripción o los gastos de graduación?",
+      "reference_answer": "No. Salvo casos específicos aprobados por el Consejo Directivo o el subsidio por auxiliatura, las ayudas financieras no se aplican a la inscripción, los servicios educativos digitales, las cuotas de laboratorio, las convalidaciones ni a otros gastos como los de graduación, certificaciones, constancias, emisión de título, aprobación de cursos por suficiencia o cursos de inglés.",
+      "expect_grounded": true,
+      "type": "Sí o no con condición",
+      "source_document": "Reglamento de Ayudas Financieras (UVG.DAF.02.001, v10.0)",
+      "source_location": "Art. 6, literal i"
     },
     {
-      "question": "¿Qué porcentaje mínimo de asistencia necesito para tener derecho a examen final?",
-      "reference_answer": "Se requiere un mínimo de 80% de asistencia a clases.",
-      "expect_grounded": true
+      "id": "Q04",
+      "question": "¿Qué promedio necesito mantener para no perder mi beca en el campus Altiplano?",
+      "reference_answer": "Debes mantener la carga completa en cada ciclo según el plan de estudios, con un promedio mínimo de 65 puntos.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Reglamento de Ayudas Financieras (UVG.DAF.02.001, v10.0)",
+      "source_location": "Art. 25 (Capítulo V, campus externos)"
     },
     {
+      "id": "Q05",
+      "question": "Si repruebo un curso, ¿me quitan parte de la beca?",
+      "reference_answer": "Sí. En caso de reprobación o retiro de cursos, el porcentaje de beca se reduce según la cantidad de cursos perdidos o retirados: 5 % por un curso, 10 % por dos cursos y 15 % por tres cursos o más, aplicado al porcentaje total de ayuda financiera. El estudiante puede solicitar un crédito educativo por el total de la penalización y, si vuelve a cumplir los requisitos académicos, recuperar la ayuda en el ciclo siguiente en proporción a la sanción.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Reglamento de Ayudas Financieras (UVG.DAF.02.001, v10.0)",
+      "source_location": "Art. 26 (Capítulo V, campus externos)"
+    },
+    {
+      "id": "Q06",
+      "question": "¿Cuánto interés cobra el crédito educativo?",
+      "reference_answer": "El crédito educativo tiene un interés variable del 10 % anual sobre saldos, a partir del mes en que inicia el pago.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Reglamento de Ayudas Financieras (UVG.DAF.02.001, v10.0)",
+      "source_location": "Art. 24 (Capítulo V, campus externos)"
+    },
+    {
+      "id": "Q07",
+      "question": "¿En cuántas cuotas puedo pagar el crédito educativo y cuándo empiezo a pagarlo?",
+      "reference_answer": "Se paga en hasta 48 mensualidades consecutivas e iguales. En carreras de pregrado el pago inicia al vencer un periodo de gracia de un año a partir de la fecha del acta de graduación; en profesorado, posgrado o maestría, el pago inicia a partir de la fecha del acta de graduación.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Reglamento de Ayudas Financieras (UVG.DAF.02.001, v10.0)",
+      "source_location": "Art. 24 (Capítulo V, campus externos)"
+    },
+    {
+      "id": "Q08",
+      "question": "¿Qué documentos necesito para solicitar la beca del programa regular?",
+      "reference_answer": "Debes ser estudiante admitido o inscrito en el campus, completar el formulario de solicitud y presentar: copia legible de tu documento de identidad vigente (o certificado de nacimiento si eres menor de edad); constancia de ingresos firmada y sellada si trabajas; copia del documento de identidad vigente de ambos padres o encargados; constancia de ingresos de ambos padres o encargados, si dependes económicamente de ellos y trabajan; y copia de un recibo de servicios básicos (agua, luz o teléfono) del domicilio de tus padres o encargados.",
+      "expect_grounded": true,
+      "type": "Lista",
+      "source_document": "Reglamento de Ayudas Financieras (UVG.DAF.02.001, v10.0)",
+      "source_location": "Art. 23 (Capítulo V, campus externos)"
+    },
+    {
+      "id": "Q09",
+      "question": "¿Qué requisitos necesito para postularme a presidente de la asociación de estudiantes del campus?",
+      "reference_answer": "Debes estar inscrito, asignado y cursando entre el segundo y el penúltimo año de la carrera; tener un promedio mínimo de 70 puntos; no haber reprobado ningún curso; no haber estado condicionado por bajo rendimiento académico ni por faltas a la ética; tener tu expediente sin llamadas de atención; y contar con condiciones de salud que te permitan desempeñar el cargo.",
+      "expect_grounded": true,
+      "type": "Lista",
+      "source_document": "Reglamento de Grupos Estudiantiles (UVG.VE.02.001, v2.0)",
+      "source_location": "Art. 12"
+    },
+    {
+      "id": "Q10",
+      "question": "¿Cuánto tiempo dura un cargo en la junta directiva de una asociación estudiantil y se puede reelegir?",
+      "reference_answer": "Todos los cargos duran un año. Se permite la reelección siempre que no sea para ocupar el mismo puesto dos periodos seguidos y se cumplan los requisitos del artículo 12.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Reglamento de Grupos Estudiantiles (UVG.VE.02.001, v2.0)",
+      "source_location": "Art. 11"
+    },
+    {
+      "id": "Q11",
+      "question": "¿Con qué documento me puedo identificar para votar en las elecciones estudiantiles?",
+      "reference_answer": "Puedes identificarte con el carné estudiantil, el Documento Personal de Identificación (DPI), la licencia de conducir o el pasaporte.",
+      "expect_grounded": true,
+      "type": "Lista",
+      "source_document": "Reglamento de Grupos Estudiantiles (UVG.VE.02.001, v2.0)",
+      "source_location": "Art. 9"
+    },
+    {
+      "id": "Q12",
+      "question": "¿En qué horario se realizan las elecciones estudiantiles?",
+      "reference_answer": "Las elecciones se realizan entre semana el jueves de 10:00 a 19:00 horas y el sábado de 9:00 a 14:00 horas.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Reglamento de Grupos Estudiantiles (UVG.VE.02.001, v2.0)",
+      "source_location": "Art. 58"
+    },
+    {
+      "id": "Q13",
+      "question": "¿Cómo puedo crear un club nuevo en la universidad?",
+      "reference_answer": "Los estudiantes interesados presentan una propuesta de inclusión a la oficina de Asuntos Estudiantiles del campus, que evalúa su viabilidad. Si se acepta, el club debe pasar un período de prueba de cinco meses antes de poder inscribirse formalmente.",
+      "expect_grounded": true,
+      "type": "Procedimiento",
+      "source_document": "Reglamento de Grupos Estudiantiles (UVG.VE.02.001, v2.0)",
+      "source_location": "Art. 88"
+    },
+    {
+      "id": "Q14",
+      "question": "¿Puede un amigo que no estudia en la UVG unirse a un club?",
+      "reference_answer": "No. Los integrantes de clubes y agrupaciones deben ser miembros de la comunidad UVG, entendidos como estudiantes inscritos y regulares; no se aceptan invitados.",
+      "expect_grounded": true,
+      "type": "Sí o no con condición",
+      "source_document": "Reglamento de Grupos Estudiantiles (UVG.VE.02.001, v2.0)",
+      "source_location": "Art. 91"
+    },
+    {
+      "id": "Q15",
+      "question": "¿Cuánto dinero aporta la universidad a la asociación de estudiantes del campus Altiplano?",
+      "reference_answer": "Al inicio del período de la junta directiva, la oficina de Asuntos Estudiantiles aporta una donación máxima de Q25,000.00 a la AEAltiplano, una vez presentado y aprobado el plan de trabajo anual.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Reglamento de Grupos Estudiantiles (UVG.VE.02.001, v2.0)",
+      "source_location": "Art. 38"
+    },
+    {
+      "id": "Q16",
+      "question": "¿Hasta cuándo puedo pagar la cuota de octubre sin recargo?",
+      "reference_answer": "El último día para pagar la cuota de estudios de octubre sin recargo es el 17 de octubre.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Calendario Académico (agosto 2026 a enero 2027, V3)",
+      "source_location": "Octubre, día 17"
+    },
+    {
+      "id": "Q17",
+      "question": "¿Cuándo empieza la inscripción para el primer ciclo 2027?",
+      "reference_answer": "La inscripción ordinaria (pago de matrícula) para el primer ciclo 2027 inicia el 21 de noviembre; ese mismo día inician las inscripciones de reingreso.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Calendario Académico (agosto 2026 a enero 2027, V3)",
+      "source_location": "Noviembre, día 21"
+    },
+    {
+      "id": "Q18",
+      "question": "¿Cuál es la fecha límite para retirar un curso?",
+      "reference_answer": "El último día para retiro de cursos con cobro es el 7 de noviembre.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Calendario Académico (agosto 2026 a enero 2027, V3)",
+      "source_location": "Noviembre, día 7"
+    },
+    {
+      "id": "Q19",
+      "question": "¿Cuándo empiezan las clases del primer ciclo de 2027?",
+      "reference_answer": "Las clases del primer ciclo 2027 inician el 18 de enero de 2027. La inducción de estudiantes de primer ingreso es el 14 y 15 de enero.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Calendario Académico (agosto 2026 a enero 2027, V3)",
+      "source_location": "Enero 2027, día 18"
+    },
+    {
+      "id": "Q20",
+      "question": "¿Cuáles son los pasos para entrar a la universidad como estudiante de primer ingreso?",
+      "reference_answer": "El proceso sigue estas etapas: recepción del contacto, seguimiento del interesado (lead), revisión y validación de los datos de la solicitud de admisión, inscripción del estudiante, solicitud de ayuda financiera, pago de matrícula, programación de la prueba diagnóstica (PAA) y asignación de cursos por parte del director de carrera.",
+      "expect_grounded": true,
+      "type": "Procedimiento",
+      "source_document": "Proceso de Admisión e Inscripción Estudiante de Primer Ingreso",
+      "source_location": "Diagrama del proceso"
+    },
+    {
+      "id": "Q21",
+      "question": "¿Qué requisitos piden para inscribirse en el Instituto Tecnológico (básico o bachillerato)?",
+      "reference_answer": "Se requiere certificado de nacimiento, expediente completo del establecimiento anterior, correo electrónico personal activo, carta de buena conducta y rendimiento académico, llenar el formulario de ayuda financiera para la cuota y llenar la solicitud de admisión en Registro Académico, de manera digital e impresa; ambos trámites se realizan en el edificio B1.",
+      "expect_grounded": true,
+      "type": "Lista",
+      "source_document": "Instituto Tecnológico (ITEC) 2025",
+      "source_location": "Requisitos de inscripción"
+    },
+    {
+      "id": "Q22",
+      "question": "¿Qué diplomados puedo elegir en el bachillerato del ITEC?",
+      "reference_answer": "El Bachillerato en Ciencias y Letras ofrece diplomados en Turismo, Horticultura, Informática, Marketing, Música, Mecatrónica y Deportes.",
+      "expect_grounded": true,
+      "type": "Lista",
+      "source_document": "Instituto Tecnológico (ITEC) 2025",
+      "source_location": "Bachillerato"
+    },
+    {
+      "id": "Q23",
+      "question": "¿Cuántos años dura la carrera de Sistemas Informáticos?",
+      "reference_answer": "La carrera dura 5 años en total: 2 años de técnico universitario y 3 años de licenciatura.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Licenciatura en Tecnología de Sistemas Informáticos 2025",
+      "source_location": "Duración"
+    },
+    {
+      "id": "Q24",
+      "question": "¿Qué horario tiene la carrera de Administración de Empresas y Mercadeo?",
+      "reference_answer": "Jueves y viernes de 6:00 p. m. a 9:00 p. m. en modalidad virtual, y sábado de 7:00 a. m. a 5:00 p. m. en modalidad presencial.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Licenciatura en Administración de Empresas y Mercadeo 2025",
+      "source_location": "Horarios"
+    },
+    {
+      "id": "Q25",
+      "question": "¿Qué diferencia hay entre el profesorado y la licenciatura en Educación Física en duración, horario y costo?",
+      "reference_answer": "El profesorado dura 3 años, se recibe los lunes de 08:00 a 18:00 y los martes de 08:00 a 16:00 horas, con inscripción de Q807.00 semestral y mensualidad de Q555.00 (10 cuotas). La licenciatura dura 2 años, se recibe los viernes de 14:00 a 20:00 y los sábados de 07:00 a 17:00 horas, con inscripción de Q807.00 semestral y mensualidad de Q800.00 (10 cuotas). Ambas son presenciales.",
+      "expect_grounded": true,
+      "type": "Comparación",
+      "source_document": "Educación Física, Deporte y Recreación Física 2025",
+      "source_location": "Inversión y horarios"
+    },
+    {
+      "id": "Q26",
+      "question": "¿Hay becas para estudiar Educación Física?",
+      "reference_answer": "Sí. UVG campus Altiplano, junto con el Consejo Nacional del Deporte y la Recreación (CONADER), brinda acceso a becas del 80 % y a un estipendio para alimentación y transporte para estudiar el profesorado o la licenciatura en Educación Física, Deporte y Recreación Física.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Educación Física, Deporte y Recreación Física 2025",
+      "source_location": "Acceso a becas CONADER"
+    },
+    {
+      "id": "Q27",
+      "question": "¿Qué pruebas de admisión hay que hacer para Educación Física?",
+      "reference_answer": "Las pruebas de admisión incluyen pruebas físicas, un estudio psicológico y la revisión del promedio de notas del nivel medio.",
+      "expect_grounded": true,
+      "type": "Lista",
+      "source_document": "Educación Física, Deporte y Recreación Física 2025",
+      "source_location": "Guía de pruebas de admisión"
+    },
+    {
+      "id": "Q28",
+      "question": "¿Cuánto cuestan los cursos libres de inglés del Centro de Idiomas?",
+      "reference_answer": "Cada nivel cuesta Q500.00 bimestral (se cursan 5 niveles al año). Además, el libro cuesta Q200.00 y la evaluación de ubicación Q30.00.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Centro de Idiomas 2025",
+      "source_location": "Cursos libres de inglés"
+    },
+    {
+      "id": "Q29",
+      "question": "¿Qué necesito para aprobar un nivel de inglés en los cursos libres?",
+      "reference_answer": "El curso se aprueba con 70 puntos y un 85 % de asistencia, que da derecho a la constancia de aprobación. El programa tiene 22 niveles de 30 horas cada uno, con clases de 4 horas semanales.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Centro de Idiomas 2025",
+      "source_location": "Cursos libres de inglés"
+    },
+    {
+      "id": "Q30",
+      "question": "¿En qué modalidad se estudia Ingeniería en Tecnología Agroforestal y cuánto dura?",
+      "reference_answer": "Se imparte en modalidad B-Learning. La carrera dura 5 años: 2 años de Técnico Universitario en Agroforestería y 3 años de Ingeniería en Tecnología Agroforestal.",
+      "expect_grounded": true,
+      "type": "Dato puntual",
+      "source_document": "Ingeniería en Tecnología Agroforestal 2025",
+      "source_location": "Duración y modalidad"
+    },
+    {
+      "id": "Q31",
+      "question": "¿Cuál es el horario de atención de la biblioteca?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "El folleto general menciona la biblioteca, pero ningún documento indica su horario."
+    },
+    {
+      "id": "Q32",
+      "question": "¿Cuánto cuesta la mensualidad de la Licenciatura en Tecnología de Sistemas Informáticos?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "El folleto de la carrera no incluye costos (a diferencia del de Educación Física)."
+    },
+    {
+      "id": "Q33",
       "question": "¿El seguro estudiantil cubre accidentes fuera del campus?",
-      "reference_answer": "No, el seguro no cubre accidentes ocurridos fuera de las instalaciones del campus.",
-      "expect_grounded": true
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "Ningún documento del corpus trata sobre el seguro estudiantil."
     },
     {
-      "question": "¿Cuánto tiempo tengo para reportar un incidente al seguro estudiantil?",
-      "reference_answer": "Debes reportarlo a la Clínica Estudiantil dentro de las 24 horas siguientes al incidente.",
-      "expect_grounded": true
+      "id": "Q34",
+      "question": "¿Cuántas faltas puedo tener antes de perder el derecho a examen final?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "El corpus no incluye un reglamento de asistencia de carreras universitarias."
     },
     {
-      "question": "¿Qué descuento obtengo si pago mi colegiatura en los primeros 10 días del mes?",
-      "reference_answer": "Obtienes un 5% de descuento sobre el monto de la colegiatura (beneficio de pronto pago).",
-      "expect_grounded": true
+      "id": "Q35",
+      "question": "¿Cuál es la nota mínima para aprobar un curso de mi carrera?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "No está en el corpus; solo los cursos libres de inglés indican 70 puntos, lo que no aplica a la carrera."
     },
     {
-      "question": "¿Cuál es el plazo máximo para retirar un curso?",
-      "reference_answer": "El plazo máximo es de 6 semanas después de iniciado el semestre, con autorización del coordinador de carrera.",
-      "expect_grounded": true
+      "id": "Q36",
+      "question": "¿Cuánto cuesta vivir en las residencias universitarias?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "El folleto general menciona las residencias, pero no su costo."
     },
     {
-      "question": "¿Qué porcentaje de colegiatura cubre la Beca Deportiva?",
-      "reference_answer": "La Beca Deportiva cubre hasta el 30% de la colegiatura.",
-      "expect_grounded": true
+      "id": "Q37",
+      "question": "¿Cuánto cuesta el parqueo del campus?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "El folleto general menciona el parqueo, pero no su costo."
     },
     {
-      "question": "¿Dónde debo presentar mi solicitud de reincorporación?",
-      "reference_answer": "En la oficina de Registro Académico.",
-      "expect_grounded": true
+      "id": "Q38",
+      "question": "¿Qué buses llegan al campus Altiplano?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "El corpus solo indica la dirección del campus, no el transporte."
     },
     {
-      "question": "¿Cuál es la capital de Guatemala?",
-      "reference_answer": "Esta pregunta no está relacionada con los documentos institucionales; el asistente debe abstenerse de responder.",
-      "expect_grounded": false
+      "id": "Q39",
+      "question": "¿Cuándo son los exámenes finales del primer ciclo 2027?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "El calendario solo cubre de agosto 2026 a enero 2027."
     },
     {
-      "question": "¿Puedo cambiarme a otra universidad mientras conservo mi beca de UVG Altiplano?",
-      "reference_answer": "El corpus de ejemplo no contiene información sobre este escenario; el asistente debe abstenerse de responder.",
-      "expect_grounded": false
+      "id": "Q40",
+      "question": "¿Cómo pido una constancia de estudios y cuánto cuesta?",
+      "reference_answer": "",
+      "expect_grounded": false,
+      "type": "Fuera del corpus",
+      "source_document": null,
+      "source_location": null,
+      "note": "El corpus no describe ese trámite ni su costo."
     }
   ]
 }

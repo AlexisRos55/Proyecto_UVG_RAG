@@ -62,7 +62,7 @@ Cobertura de pruebas automatizadas del backend: **432 pruebas** (404 unitarias, 
 - **Modo claro y oscuro**, con conmutador en la aplicación y respeto por la preferencia del sistema.
 - **Interfaz responsiva**, con panel lateral colapsable en pantallas pequeñas.
 - **Dockerizado end-to-end**: `docker compose up --build` levanta base de datos, backend y frontend con healthchecks y migraciones automáticas.
-- **Script de evaluación con RAGAS** (fidelidad, relevancia, precisión y exhaustividad de contexto) sobre un dataset de referencia (`scripts/golden_dataset.json`).
+- **Script de evaluación con RAGAS** (fidelidad, relevancia, precisión y exhaustividad de contexto) sobre un banco de referencia de 40 preguntas del corpus oficial (`scripts/golden_dataset.json`), con 3 repeticiones por pregunta, y **análisis estadístico** de las hipótesis del protocolo (`scripts/analyze.py`).
 
 ## Tecnologías utilizadas
 

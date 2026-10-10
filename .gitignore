@@ -43,3 +43,12 @@ npm-debug.log*
 # Protocolo de graduación: documento personal del autor. El repositorio es
 # público, así que se mantiene fuera del control de versiones a propósito.
 docs/source/Protocolo*.docx
+
+# El protocolo y sus versiones, en cualquier carpeta (el repositorio es público),
+# y los archivos de bloqueo que crea Word al abrir un documento.
+Protocolo*.docx
+~$*
+
+# Salidas locales de la evaluación de la Fase V (la encuesta contiene datos de estudiantes)
+scripts/evaluation_report.json
+scripts/resultados/
